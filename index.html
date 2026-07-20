@@ -283,11 +283,11 @@
     function showHome() {
       var main = document.getElementById('mainContent');
       main.innerHTML = '';
-      main.appendChild(renderSection('Enrolling Now', currentData.enrolling, true));
-      main.appendChild(renderSection('Happening Now', currentData.active, false));
+      main.appendChild(renderSection('Enrolling Now', currentData.enrolling));
+      main.appendChild(renderSection('Happening Now', currentData.active));
     }
 
-    function renderSection(title, events, showJoin) {
+    function renderSection(title, events) {
       var wrap = document.createElement('div');
       var h = document.createElement('h2');
       h.className = 'section-title';
@@ -311,30 +311,27 @@
         h3.textContent = ev.name;
         card.appendChild(h3);
 
-        if (showJoin) {
-          var btn = document.createElement('button');
-          btn.textContent = ev.isEnrolled ? 'Joined' : 'Join';
-          btn.disabled = ev.isEnrolled;
-          btn.onclick = function () { joinEvent(ev.eventId, btn); };
-          card.appendChild(btn);
-        } else {
-          var btn2 = document.createElement('button');
-          btn2.textContent = 'View';
-          btn2.onclick = function () { routeToEvent(ev); };
-          card.appendChild(btn2);
-        }
+        var btn = document.createElement('button');
+        btn.textContent = 'View';
+        btn.onclick = function () { routeToEvent(ev); };
+        card.appendChild(btn);
         grid.appendChild(card);
       });
       wrap.appendChild(grid);
       return wrap;
     }
 
-    function joinEvent(eventId, btn) {
+    function refreshEventView(eventId) {
       var token = localStorage.getItem(TOKEN_KEY);
-      btn.disabled = true;
-      callApi('enrollInEvent', { token: token, eventId: eventId })
-        .then(function () { loadEvents(); })
-        .catch(function (err) { alert(err.message); btn.disabled = false; });
+      callApi('getEventsForUser', { token: token })
+        .then(function (data) {
+          currentData = data;
+          renderNav(data.active);
+          var all = data.enrolling.concat(data.active);
+          var ev = all.filter(function (e) { return e.eventId === eventId; })[0];
+          if (ev) { routeToEvent(ev); } else { showHome(); }
+        })
+        .catch(function (err) { alert(err.message); });
     }
 
     function showEventPlaceholder(ev) {
@@ -343,10 +340,42 @@
       var h = document.createElement('h2');
       h.className = 'section-title';
       h.textContent = ev.name;
+      main.appendChild(h);
+
+      if (ev.isEnrolled) {
+        var already = document.createElement('div');
+        already.className = 'empty';
+        already.textContent = "You're already registered for this event.";
+        main.appendChild(already);
+      } else if (ev.status === 'Enrolling') {
+        var msg = document.createElement('div');
+        msg.className = 'msg';
+        var registerBtn = document.createElement('button');
+        registerBtn.textContent = 'Register';
+        registerBtn.onclick = function () {
+          var token = localStorage.getItem(TOKEN_KEY);
+          registerBtn.disabled = true;
+          callApi('enrollInEvent', { token: token, eventId: ev.eventId })
+            .then(function () { refreshEventView(ev.eventId); })
+            .catch(function (err) {
+              msg.textContent = err.message;
+              msg.className = 'msg error';
+              registerBtn.disabled = false;
+            });
+        };
+        main.appendChild(registerBtn);
+        main.appendChild(msg);
+      } else {
+        var closed = document.createElement('div');
+        closed.className = 'empty';
+        closed.textContent = 'Registration is not currently open for this event.';
+        main.appendChild(closed);
+      }
+
       var p = document.createElement('div');
       p.className = 'empty';
+      p.style.marginTop = '16px';
       p.textContent = 'This page is coming soon.';
-      main.appendChild(h);
       main.appendChild(p);
     }
 
