@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BGK Events</title>
+  <style>
+    :root {
+      --teal: #00e0b8;
+      --teal-dark: #00b294;
+      --ink: #1a1a1a;
+      --border: #d8d8d8;
+      --bg: #f7f7f7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    .hidden { display: none !important; }
+
+    /* Login */
+    #loginScreen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 32px;
+      width: 320px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    }
+    .card h1 { margin: 0 0 20px; font-size: 22px; text-align: center; }
+    .card label { display: block; font-size: 13px; margin: 12px 0 4px; color: #555; }
+    .card input {
+      width: 100%;
+      padding: 9px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .card button {
+      width: 100%;
+      margin-top: 18px;
+      padding: 10px;
+      background: var(--teal-dark);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .card button:hover { background: #009b80; }
+    .link-btn {
+      background: none;
+      border: none;
+      color: var(--teal-dark);
+      font-size: 13px;
+      cursor: pointer;
+      margin-top: 12px;
+      text-decoration: underline;
+      padding: 0;
+      width: auto;
+    }
+    .msg { font-size: 13px; margin-top: 10px; text-align: center; }
+    .msg.error { color: #c0392b; }
+    .msg.ok { color: #1e8449; }
+
+    /* App shell */
+    #appScreen { min-height: 100vh; }
+    nav {
+      background: var(--teal);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      height: 56px;
+      flex-wrap: wrap;
+    }
+    nav .brand { font-weight: 700; font-size: 18px; margin-right: 24px; }
+    nav a, nav .navlink {
+      color: var(--ink);
+      text-decoration: none;
+      font-size: 14px;
+      margin-right: 18px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    nav a:hover, nav .navlink:hover { text-decoration: underline; }
+    nav .spacer { flex: 1; }
+
+    main { max-width: 900px; margin: 0 auto; padding: 24px 20px; }
+    h2.section-title { font-size: 16px; text-transform: uppercase; letter-spacing: 0.04em; color: #555; margin: 24px 0 10px; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+    .eventCard {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .eventCard h3 { margin: 0 0 10px; font-size: 16px; }
+    .eventCard button {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: none;
+      background: var(--teal-dark);
+      color: white;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .eventCard button:disabled { background: #aaa; cursor: default; }
+    .empty { color: #888; font-size: 14px; }
+
+    /* Admin */
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 14px; }
+    td input, td select { width: 100%; padding: 5px; border: 1px solid var(--border); border-radius: 4px; }
+    .adminBar { display: flex; gap: 10px; margin: 16px 0; }
+    .adminBar input, .adminBar select { padding: 6px; border: 1px solid var(--border); border-radius: 4px; }
+    .btn-small {
+      padding: 5px 10px; border-radius: 5px; border: none;
+      background: var(--teal-dark); color: white; cursor: pointer; font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loginScreen">
+    <div class="card">
+      <h1>BGK Events</h1>
+      <div id="loginForm">
+        <label>Email</label>
+        <input type="email" id="loginEmail" autocomplete="username">
+        <label>PIN</label>
+        <input type="password" id="loginPin" autocomplete="current-password">
+        <button onclick="doLogin()">Log In</button>
+        <button class="link-btn" onclick="toggleForgot(true)">Forgot PIN?</button>
+        <div id="loginMsg" class="msg"></div>
+      </div>
+      <div id="forgotForm" class="hidden">
+        <label>Email</label>
+        <input type="email" id="forgotEmail">
+        <button onclick="doForgotPin()">Send New PIN</button>
+        <button class="link-btn" onclick="toggleForgot(false)">Back to log in</button>
+        <div id="forgotMsg" class="msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="appScreen" class="hidden">
+    <nav>
+      <span class="brand">BGK Events</span>
+      <a class="navlink" onclick="showHome()">Home</a>
+      <span id="navEvents"></span>
+      <span class="spacer"></span>
+      <a class="navlink" id="adminLink" onclick="showAdmin()"></a>
+      <a class="navlink" onclick="doLogout()">Log Out</a>
+    </nav>
+    <main id="mainContent"></main>
+  </div>
+
+  <script>
+    // If you redeploy the Apps Script as a brand-new deployment (not just a
+    // new version of the existing one), the URL changes and this needs updating.
+    var EXEC_URL = 'https://script.google.com/macros/s/AKfycbwKFG8dNwjpVpcix8hWSfuiS1maxwTL7Dj93My6Z5FMjCwh5LL5NcjbxRHohkcT8zMm/exec';
+    var TOKEN_KEY = 'bgkEventsToken';
+    var currentUser = null;
+    var currentData = null;
+
+    function callApi(action, payload) {
+      return fetch(EXEC_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: action, payload: payload || {} })
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (data.error) throw new Error(data.error);
+          return data;
+        });
+    }
+
+    function toggleForgot(show) {
+      document.getElementById('loginForm').classList.toggle('hidden', show);
+      document.getElementById('forgotForm').classList.toggle('hidden', !show);
+      document.getElementById('loginMsg').textContent = '';
+      document.getElementById('forgotMsg').textContent = '';
+    }
+
+    function doLogin() {
+      var email = document.getElementById('loginEmail').value.trim();
+      var pin = document.getElementById('loginPin').value.trim();
+      var msg = document.getElementById('loginMsg');
+      msg.textContent = '';
+      callApi('login', { email: email, pin: pin })
+        .then(function (res) {
+          if (!res.success) {
+            msg.textContent = res.message;
+            msg.className = 'msg error';
+            return;
+          }
+          localStorage.setItem(TOKEN_KEY, res.token);
+          currentUser = res.user;
+          enterApp();
+        })
+        .catch(function (err) { msg.textContent = err.message; msg.className = 'msg error'; });
+    }
+
+    function doForgotPin() {
+      var email = document.getElementById('forgotEmail').value.trim();
+      var msg = document.getElementById('forgotMsg');
+      callApi('forgotPin', { email: email })
+        .then(function (res) {
+          msg.textContent = res.message;
+          msg.className = res.success ? 'msg ok' : 'msg error';
+        })
+        .catch(function (err) { msg.textContent = err.message; msg.className = 'msg error'; });
+    }
+
+    function doLogout() {
+      var token = localStorage.getItem(TOKEN_KEY);
+      callApi('logout', { token: token }).catch(function () {});
+      localStorage.removeItem(TOKEN_KEY);
+      location.reload();
+    }
+
+    function enterApp() {
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('appScreen').classList.remove('hidden');
+      document.getElementById('adminLink').textContent = currentUser.isAdmin ? 'Admin' : '';
+      loadEvents();
+    }
+
+    function loadEvents() {
+      var token = localStorage.getItem(TOKEN_KEY);
+      callApi('getEventsForUser', { token: token })
+        .then(function (data) {
+          currentData = data;
+          renderNav(data.active);
+          showHome();
+        })
+        .catch(function (err) { alert(err.message); });
+    }
+
+    function renderNav(activeEvents) {
+      var nav = document.getElementById('navEvents');
+      nav.innerHTML = '';
+      activeEvents.forEach(function (ev) {
+        var a = document.createElement('a');
+        a.className = 'navlink';
+        a.textContent = ev.name;
+        a.onclick = function () { showEventPlaceholder(ev); };
+        nav.appendChild(a);
+      });
+    }
+
+    function showHome() {
+      var main = document.getElementById('mainContent');
+      main.innerHTML = '';
+      main.appendChild(renderSection('Enrolling Now', currentData.enrolling, true));
+      main.appendChild(renderSection('Happening Now', currentData.active, false));
+    }
+
+    function renderSection(title, events, showJoin) {
+      var wrap = document.createElement('div');
+      var h = document.createElement('h2');
+      h.className = 'section-title';
+      h.textContent = title;
+      wrap.appendChild(h);
+
+      if (!events.length) {
+        var empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'Nothing here right now.';
+        wrap.appendChild(empty);
+        return wrap;
+      }
+
+      var grid = document.createElement('div');
+      grid.className = 'grid';
+      events.forEach(function (ev) {
+        var card = document.createElement('div');
+        card.className = 'eventCard';
+        var h3 = document.createElement('h3');
+        h3.textContent = ev.name;
+        card.appendChild(h3);
+
+        if (showJoin) {
+          var btn = document.createElement('button');
+          btn.textContent = ev.isEnrolled ? 'Joined' : 'Join';
+          btn.disabled = ev.isEnrolled;
+          btn.onclick = function () { joinEvent(ev.eventId, btn); };
+          card.appendChild(btn);
+        } else {
+          var btn2 = document.createElement('button');
+          btn2.textContent = 'View';
+          btn2.onclick = function () { showEventPlaceholder(ev); };
+          card.appendChild(btn2);
+        }
+        grid.appendChild(card);
+      });
+      wrap.appendChild(grid);
+      return wrap;
+    }
+
+    function joinEvent(eventId, btn) {
+      var token = localStorage.getItem(TOKEN_KEY);
+      btn.disabled = true;
+      callApi('enrollInEvent', { token: token, eventId: eventId })
+        .then(function () { loadEvents(); })
+        .catch(function (err) { alert(err.message); btn.disabled = false; });
+    }
+
+    function showEventPlaceholder(ev) {
+      var main = document.getElementById('mainContent');
+      main.innerHTML = '';
+      var h = document.createElement('h2');
+      h.className = 'section-title';
+      h.textContent = ev.name;
+      var p = document.createElement('div');
+      p.className = 'empty';
+      p.textContent = 'This page is coming soon.';
+      main.appendChild(h);
+      main.appendChild(p);
+    }
+
+    // ---------- Admin ----------
+
+    function showAdmin() {
+      var token = localStorage.getItem(TOKEN_KEY);
+      callApi('adminGetEvents', { token: token })
+        .then(renderAdmin)
+        .catch(function (err) { alert(err.message); });
+    }
+
+    function renderAdmin(events) {
+      var main = document.getElementById('mainContent');
+      main.innerHTML = '';
+      var h = document.createElement('h2');
+      h.className = 'section-title';
+      h.textContent = 'Admin — Events';
+      main.appendChild(h);
+
+      var table = document.createElement('table');
+      table.innerHTML = '<tr><th>Name</th><th>Status</th><th>Visibility</th><th></th></tr>';
+      events.forEach(function (ev) { table.appendChild(adminRow(ev)); });
+      main.appendChild(table);
+
+      var addTitle = document.createElement('h2');
+      addTitle.className = 'section-title';
+      addTitle.textContent = 'Add New Event';
+      main.appendChild(addTitle);
+      main.appendChild(adminRow({ EventID: '', EventName: '', Status: 'Enrolling', Visibility: 'All' }, true));
+    }
+
+    function adminRow(ev, isTable) {
+      var tr = document.createElement(isTable ? 'div' : 'tr');
+      if (isTable) tr.className = 'adminBar';
+
+      var nameInput = document.createElement('input');
+      nameInput.value = ev.EventName || '';
+      nameInput.placeholder = 'Event name';
+
+      var statusSelect = document.createElement('select');
+      ['Enrolling', 'Active', 'Archived'].forEach(function (s) {
+        var o = document.createElement('option');
+        o.value = s; o.textContent = s;
+        if (ev.Status === s) o.selected = true;
+        statusSelect.appendChild(o);
+      });
+
+      var visSelect = document.createElement('select');
+      ['All', 'Enrolled', 'Hidden'].forEach(function (v) {
+        var o = document.createElement('option');
+        o.value = v; o.textContent = v;
+        if (ev.Visibility === v) o.selected = true;
+        visSelect.appendChild(o);
+      });
+
+      var saveBtn = document.createElement('button');
+      saveBtn.className = 'btn-small';
+      saveBtn.textContent = ev.EventID ? 'Save' : 'Add';
+      saveBtn.onclick = function () {
+        var token = localStorage.getItem(TOKEN_KEY);
+        callApi('adminSaveEvent', {
+          token: token,
+          event: {
+            EventID: ev.EventID,
+            EventName: nameInput.value,
+            Status: statusSelect.value,
+            Visibility: visSelect.value
+          }
+        })
+          .then(function () { showAdmin(); })
+          .catch(function (err) { alert(err.message); });
+      };
+
+      if (isTable) {
+        [nameInput, statusSelect, visSelect, saveBtn].forEach(function (el) { tr.appendChild(el); });
+      } else {
+        [nameInput, statusSelect, visSelect, saveBtn].forEach(function (el) {
+          var td = document.createElement('td');
+          td.appendChild(el);
+          tr.appendChild(td);
+        });
+      }
+      return tr;
+    }
+
+    // ---------- boot ----------
+
+    (function boot() {
+      var token = localStorage.getItem(TOKEN_KEY);
+      if (!token) return;
+      callApi('validateSession', { token: token })
+        .then(function (res) {
+          if (!res.valid) { localStorage.removeItem(TOKEN_KEY); return; }
+          currentUser = res.user;
+          enterApp();
+        })
+        .catch(function () { localStorage.removeItem(TOKEN_KEY); });
+    })();
+  </script>
+</body>
+</html>
