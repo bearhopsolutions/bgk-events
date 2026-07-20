@@ -122,7 +122,7 @@
     table { width: 100%; border-collapse: collapse; background: white; }
     th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 14px; }
     td input, td select { width: 100%; padding: 5px; border: 1px solid var(--border); border-radius: 4px; }
-    .adminBar { display: flex; gap: 10px; margin: 16px 0; }
+    .adminBar { display: flex; gap: 10px; margin: 16px 0; flex-wrap: wrap; align-items: center; }
     .adminBar input, .adminBar select { padding: 6px; border: 1px solid var(--border); border-radius: 4px; }
     .btn-small {
       padding: 5px 10px; border-radius: 5px; border: none;
@@ -173,6 +173,26 @@
     var TOKEN_KEY = 'bgkEventsToken';
     var currentUser = null;
     var currentData = null;
+    var MODULES = [
+      { value: 'WeightLoss', label: 'Weight Loss Challenge' },
+      { value: 'Camping', label: 'Camping' },
+      { value: 'BlindDateBook', label: 'Blind Date with a Book' },
+      { value: 'ChristmasParty', label: 'Christmas Party' },
+      { value: 'BGKCreations', label: 'BGK Creations' }
+    ];
+
+    function toDateInputValue(v) {
+      return v ? String(v).slice(0, 10) : '';
+    }
+
+    function readFileAsBase64(file) {
+      return new Promise(function (resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function () { resolve(reader.result.split(',')[1]); };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
 
     function callApi(action, payload) {
       return fetch(EXEC_URL, {
@@ -255,7 +275,7 @@
         var a = document.createElement('a');
         a.className = 'navlink';
         a.textContent = ev.name;
-        a.onclick = function () { showEventPlaceholder(ev); };
+        a.onclick = function () { routeToEvent(ev); };
         nav.appendChild(a);
       });
     }
@@ -300,7 +320,7 @@
         } else {
           var btn2 = document.createElement('button');
           btn2.textContent = 'View';
-          btn2.onclick = function () { showEventPlaceholder(ev); };
+          btn2.onclick = function () { routeToEvent(ev); };
           card.appendChild(btn2);
         }
         grid.appendChild(card);
@@ -330,6 +350,183 @@
       main.appendChild(p);
     }
 
+    function routeToEvent(ev) {
+      if (ev.moduleType === 'WeightLoss') {
+        showWeightLossModule(ev.eventId);
+      } else {
+        showEventPlaceholder(ev);
+      }
+    }
+
+    // ---------- Weight Loss Challenge module ----------
+
+    function showWeightLossModule(eventId) {
+      var token = localStorage.getItem(TOKEN_KEY);
+      callApi('getModuleData', { token: token, eventId: eventId })
+        .then(function (data) { renderWeightLossModule(data, eventId); })
+        .catch(function (err) { alert(err.message); });
+    }
+
+    function renderWeightLossModule(data, eventId) {
+      var main = document.getElementById('mainContent');
+      main.innerHTML = '';
+
+      var h = document.createElement('h2');
+      h.className = 'section-title';
+      h.textContent = data.name + ' — ' + data.status;
+      main.appendChild(h);
+
+      if (!data.isParticipant) {
+        if (data.status === 'Enrolling') {
+          var joinWrap = document.createElement('div');
+          joinWrap.className = 'card';
+          joinWrap.style.width = 'auto';
+          joinWrap.style.maxWidth = '320px';
+          joinWrap.style.marginBottom = '20px';
+          var jLabel = document.createElement('label');
+          jLabel.textContent = 'Starting weight (lbs)';
+          var weightInput = document.createElement('input');
+          weightInput.type = 'number';
+          var joinBtn = document.createElement('button');
+          joinBtn.textContent = 'Join Challenge';
+          var joinMsg = document.createElement('div');
+          joinMsg.className = 'msg';
+          joinBtn.onclick = function () {
+            var token = localStorage.getItem(TOKEN_KEY);
+            callApi('joinWeightLossChallenge', { token: token, eventId: eventId, initialWeight: weightInput.value })
+              .then(function () { showWeightLossModule(eventId); })
+              .catch(function (err) { joinMsg.textContent = err.message; joinMsg.className = 'msg error'; });
+          };
+          [jLabel, weightInput, joinBtn, joinMsg].forEach(function (el) { joinWrap.appendChild(el); });
+          main.appendChild(joinWrap);
+        } else {
+          var closed = document.createElement('div');
+          closed.className = 'empty';
+          closed.textContent = 'Enrollment is not currently open for this challenge.';
+          main.appendChild(closed);
+        }
+      } else {
+        var subTitle = document.createElement('h2');
+        subTitle.className = 'section-title';
+        subTitle.textContent = 'Week ' + data.currentWeek + ' Weigh-In';
+        main.appendChild(subTitle);
+
+        var form = document.createElement('div');
+        form.className = 'card';
+        form.style.width = 'auto';
+        form.style.maxWidth = '320px';
+        var wLabel = document.createElement('label');
+        wLabel.textContent = 'Weight (lbs)';
+        var wInput = document.createElement('input');
+        wInput.type = 'number';
+        var pLabel = document.createElement('label');
+        pLabel.textContent = 'Scale photo';
+        var pInput = document.createElement('input');
+        pInput.type = 'file';
+        pInput.accept = 'image/*';
+        var subBtn = document.createElement('button');
+        subBtn.textContent = 'Submit Weigh-In';
+        var subMsg = document.createElement('div');
+        subMsg.className = 'msg';
+        subBtn.onclick = function () {
+          if (!wInput.value) { subMsg.textContent = 'Enter a weight.'; subMsg.className = 'msg error'; return; }
+          var token = localStorage.getItem(TOKEN_KEY);
+          var proceed = function (base64, mime) {
+            callApi('submitWeighIn', { token: token, eventId: eventId, week: data.currentWeek, weight: wInput.value, photoBase64: base64 || '', photoMimeType: mime || '' })
+              .then(function () { showWeightLossModule(eventId); })
+              .catch(function (err) { subMsg.textContent = err.message; subMsg.className = 'msg error'; });
+          };
+          if (pInput.files && pInput.files[0]) {
+            var file = pInput.files[0];
+            readFileAsBase64(file).then(function (base64) { proceed(base64, file.type); })
+              .catch(function () { subMsg.textContent = 'Could not read photo.'; subMsg.className = 'msg error'; });
+          } else {
+            proceed('', '');
+          }
+        };
+        [wLabel, wInput, pLabel, pInput, subBtn, subMsg].forEach(function (el) { form.appendChild(el); });
+        main.appendChild(form);
+
+        var myTitle = document.createElement('h2');
+        myTitle.className = 'section-title';
+        myTitle.textContent = 'My Weigh-Ins';
+        main.appendChild(myTitle);
+        var myTable = document.createElement('table');
+        myTable.innerHTML = '<tr><th>Week</th><th>Weight</th><th>Verified</th></tr>';
+        data.myWeighIns.forEach(function (w) {
+          var tr = document.createElement('tr');
+          tr.innerHTML = '<td>' + w.week + '</td><td>' + w.weight + '</td><td>' + (w.verified ? 'Yes' : 'Pending') + '</td>';
+          myTable.appendChild(tr);
+        });
+        main.appendChild(myTable);
+      }
+
+      var lbTitle = document.createElement('h2');
+      lbTitle.className = 'section-title';
+      lbTitle.textContent = 'Leaderboard';
+      main.appendChild(lbTitle);
+      var lbTable = document.createElement('table');
+      lbTable.innerHTML = '<tr><th>Name</th><th>Lbs Lost</th><th>% Lost</th>' + (currentUser.isAdmin ? '<th>Paid</th>' : '') + '</tr>';
+      data.leaderboard.forEach(function (row) {
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + row.name + '</td><td>' + row.lbsLost + '</td><td>' + row.pctLost + '%</td>';
+        if (currentUser.isAdmin) {
+          var td = document.createElement('td');
+          var cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.checked = !!row.paid;
+          cb.onchange = function () {
+            var token = localStorage.getItem(TOKEN_KEY);
+            callApi('adminSetPaid', { token: token, eventId: eventId, email: row.email, paid: cb.checked }).catch(function (err) { alert(err.message); });
+          };
+          td.appendChild(cb);
+          tr.appendChild(td);
+        }
+        lbTable.appendChild(tr);
+      });
+      main.appendChild(lbTable);
+
+      if (currentUser.isAdmin) {
+        var reviewTitle = document.createElement('h2');
+        reviewTitle.className = 'section-title';
+        reviewTitle.textContent = 'Admin — Review Weigh-Ins';
+        main.appendChild(reviewTitle);
+        var reviewHolder = document.createElement('div');
+        reviewHolder.id = 'weighInReview';
+        main.appendChild(reviewHolder);
+        loadWeighInReview(eventId);
+      }
+    }
+
+    function loadWeighInReview(eventId) {
+      var token = localStorage.getItem(TOKEN_KEY);
+      callApi('adminGetWeighIns', { token: token, eventId: eventId })
+        .then(function (rows) {
+          var holder = document.getElementById('weighInReview');
+          if (!holder) return;
+          holder.innerHTML = '';
+          var table = document.createElement('table');
+          table.innerHTML = '<tr><th>Name</th><th>Week</th><th>Weight</th><th>Photo</th><th>Verified</th></tr>';
+          rows.forEach(function (r) {
+            var tr = document.createElement('tr');
+            var photoCell = r.photoUrl ? '<a href="' + r.photoUrl + '" target="_blank">View</a>' : '—';
+            tr.innerHTML = '<td>' + r.name + '</td><td>' + r.week + '</td><td>' + r.weight + '</td><td>' + photoCell + '</td>';
+            var td = document.createElement('td');
+            var cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.checked = r.verified;
+            cb.onchange = function () {
+              callApi('adminVerifyWeighIn', { token: token, eventId: eventId, email: r.email, week: r.week, verified: cb.checked }).catch(function (err) { alert(err.message); });
+            };
+            td.appendChild(cb);
+            tr.appendChild(td);
+            table.appendChild(tr);
+          });
+          holder.appendChild(table);
+        })
+        .catch(function (err) { alert(err.message); });
+    }
+
     // ---------- Admin ----------
 
     function showAdmin() {
@@ -348,32 +545,44 @@
       main.appendChild(h);
 
       var table = document.createElement('table');
-      table.innerHTML = '<tr><th>Name</th><th>Status</th><th>Visibility</th><th></th></tr>';
-      events.forEach(function (ev) { table.appendChild(adminRow(ev)); });
+      table.innerHTML = '<tr><th>Name</th><th>Module</th><th>Reg. Start</th><th>Reg. End</th><th>End Date</th><th>Visibility</th><th>Status</th><th></th></tr>';
+      events.forEach(function (ev) { table.appendChild(adminRow(ev, false)); });
       main.appendChild(table);
 
       var addTitle = document.createElement('h2');
       addTitle.className = 'section-title';
       addTitle.textContent = 'Add New Event';
       main.appendChild(addTitle);
-      main.appendChild(adminRow({ EventID: '', EventName: '', Status: 'Enrolling', Visibility: 'All' }, true));
+      main.appendChild(adminRow({ EventID: '', EventName: '', ModuleType: 'WeightLoss', Visibility: 'All' }, true));
     }
 
-    function adminRow(ev, isTable) {
-      var tr = document.createElement(isTable ? 'div' : 'tr');
-      if (isTable) tr.className = 'adminBar';
-
+    function adminRow(ev, isAddForm) {
       var nameInput = document.createElement('input');
       nameInput.value = ev.EventName || '';
       nameInput.placeholder = 'Event name';
 
-      var statusSelect = document.createElement('select');
-      ['Enrolling', 'Active', 'Archived'].forEach(function (s) {
+      var moduleSelect = document.createElement('select');
+      MODULES.forEach(function (m) {
         var o = document.createElement('option');
-        o.value = s; o.textContent = s;
-        if (ev.Status === s) o.selected = true;
-        statusSelect.appendChild(o);
+        o.value = m.value; o.textContent = m.label;
+        if (ev.ModuleType === m.value) o.selected = true;
+        moduleSelect.appendChild(o);
       });
+
+      var regStartInput = document.createElement('input');
+      regStartInput.type = 'date';
+      regStartInput.title = 'Registration opens';
+      regStartInput.value = toDateInputValue(ev.RegistrationStart);
+
+      var regEndInput = document.createElement('input');
+      regEndInput.type = 'date';
+      regEndInput.title = 'Registration closes';
+      regEndInput.value = toDateInputValue(ev.RegistrationEnd);
+
+      var endDateInput = document.createElement('input');
+      endDateInput.type = 'date';
+      endDateInput.title = 'Event archives after this date';
+      endDateInput.value = toDateInputValue(ev.EventEndDate);
 
       var visSelect = document.createElement('select');
       ['All', 'Enrolled', 'Hidden'].forEach(function (v) {
@@ -393,23 +602,36 @@
           event: {
             EventID: ev.EventID,
             EventName: nameInput.value,
-            Status: statusSelect.value,
-            Visibility: visSelect.value
+            ModuleType: moduleSelect.value,
+            Visibility: visSelect.value,
+            RegistrationStart: regStartInput.value,
+            RegistrationEnd: regEndInput.value,
+            EventEndDate: endDateInput.value
           }
         })
           .then(function () { showAdmin(); })
           .catch(function (err) { alert(err.message); });
       };
 
-      if (isTable) {
-        [nameInput, statusSelect, visSelect, saveBtn].forEach(function (el) { tr.appendChild(el); });
-      } else {
-        [nameInput, statusSelect, visSelect, saveBtn].forEach(function (el) {
-          var td = document.createElement('td');
-          td.appendChild(el);
-          tr.appendChild(td);
-        });
+      if (isAddForm) {
+        var wrap = document.createElement('div');
+        wrap.className = 'adminBar';
+        [nameInput, moduleSelect, regStartInput, regEndInput, endDateInput, visSelect, saveBtn].forEach(function (el) { wrap.appendChild(el); });
+        return wrap;
       }
+
+      var tr = document.createElement('tr');
+      [nameInput, moduleSelect, regStartInput, regEndInput, endDateInput, visSelect].forEach(function (el) {
+        var td = document.createElement('td');
+        td.appendChild(el);
+        tr.appendChild(td);
+      });
+      var statusTd = document.createElement('td');
+      statusTd.textContent = ev.computedStatus || '';
+      tr.appendChild(statusTd);
+      var saveTd = document.createElement('td');
+      saveTd.appendChild(saveBtn);
+      tr.appendChild(saveTd);
       return tr;
     }
 

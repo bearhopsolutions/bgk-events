@@ -17,8 +17,10 @@ The site is now split in two:
 ## 3. Seed the database
 1. In the Apps Script editor, find the function dropdown at the top (next to Debug) and select **setup**.
 2. Click **Run**.
-3. First time only: it'll ask for permissions — click through "Review permissions" → choose your Google account → "Advanced" → "Go to BGK Events (unsafe)" → Allow. (This warning is normal for scripts you write yourself.)
-4. Check the Sheet — you should now see three tabs: `Users`, `Events`, `Enrollments`, with Kevin seeded as the first admin.
+3. First time only: it'll ask for permissions — click through "Review permissions" → choose your Google account → "Advanced" → "Go to BGK Events (unsafe)" → Allow. (This warning is normal for scripts you write yourself.) The Weight Loss module needs Drive access too (for weigh-in photos) — approve that the same way if asked.
+4. Check the Sheet — you should now see five tabs: `Users`, `Events`, `Enrollments`, `WeightLossParticipants`, `WeighIns`, with Kevin seeded as the first admin.
+
+**Careful:** re-running `setup()` later wipes and re-seeds `Users`, `Events`, and `Enrollments`. If you've added other people or real events by then, note them down first (or ask to build a safer migration instead of re-running setup).
 
 ## 4. Deploy the backend as a web app (JSON API)
 1. In the Apps Script editor, click **Deploy → New deployment** (or, if a deployment already exists, **Manage deployments → pencil icon → Version: New version**).
@@ -36,10 +38,15 @@ The site is now split in two:
 ## 6. Log in
 - Go to the GitHub Pages URL.
 - Log in as `kevin412l@hotmail.com` / PIN `041295`.
-- You'll see the Admin link in the top right — that's where you add events (name, status, visibility) for now.
+- You'll see the Admin link in the top right — go to **Admin → Add New Event**:
+  - **Module**: pick "Weight Loss Challenge" (the only one that's actually built so far — the rest show a "coming soon" placeholder when clicked).
+  - **Reg. Start / Reg. End**: the window people can join in. The event shows as "Enrolling" during this window.
+  - **End Date**: once today passes this date, the event auto-archives and disappears from the home page. Leave any date blank to skip that behavior (e.g. no end date = never auto-archives).
+  - **Status** is no longer something you set by hand — it's shown read-only in the table, computed from those dates.
 
 ## Notes
 - To add Jared, Nichole, Abe, Christina etc. as users for now: open the `Users` tab in the Sheet and add a row per person (Email, Name, PIN, IsAdmin=FALSE). We'll build a nicer admin UI for this later if you want.
 - Changing `index.html`: just push the change to GitHub — Pages updates automatically within a minute or two.
 - Changing `Code.gs`: paste the updated version into the Apps Script editor, then **Deploy → Manage deployments → edit (pencil) → New version → Deploy** to push it live. Just saving doesn't update the live URL.
-- The event pages themselves (Biggest Loser Challenge, Camping, etc.) aren't built yet — clicking an event right now shows a "coming soon" placeholder. That's next.
+- Weigh-in photos are stored in a Google Drive folder that gets created automatically (named "BGK Events - WeighIn Photos - `<eventId>`") the first time someone uploads one for that event. Only you (the script owner) can open them by default.
+- Camping, Blind Date with a Book, Christmas Party, and BGK Creations are selectable as modules but aren't built yet — clicking those events still shows "coming soon."
