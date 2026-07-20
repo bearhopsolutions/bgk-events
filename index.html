@@ -122,7 +122,9 @@
     table { width: 100%; border-collapse: collapse; background: white; }
     th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 14px; }
     td input, td select { width: 100%; padding: 5px; border: 1px solid var(--border); border-radius: 4px; }
-    .adminBar { display: flex; gap: 10px; margin: 16px 0; flex-wrap: wrap; align-items: center; }
+    .adminBar { display: flex; gap: 10px; margin: 16px 0; flex-wrap: wrap; align-items: flex-end; }
+    .fieldGroup { display: flex; flex-direction: column; font-size: 12px; }
+    .fieldGroup label { color: #555; margin-bottom: 4px; }
     .adminBar input, .adminBar select { padding: 6px; border: 1px solid var(--border); border-radius: 4px; }
     .btn-small {
       padding: 5px 10px; border-radius: 5px; border: none;
@@ -183,6 +185,16 @@
 
     function toDateInputValue(v) {
       return v ? String(v).slice(0, 10) : '';
+    }
+
+    function fieldGroup(labelText, el) {
+      var group = document.createElement('div');
+      group.className = 'fieldGroup';
+      var label = document.createElement('label');
+      label.textContent = labelText;
+      group.appendChild(label);
+      group.appendChild(el);
+      return group;
     }
 
     function readFileAsBase64(file) {
@@ -645,7 +657,21 @@
       if (isAddForm) {
         var wrap = document.createElement('div');
         wrap.className = 'adminBar';
-        [nameInput, moduleSelect, regStartInput, regEndInput, endDateInput, visSelect, saveBtn].forEach(function (el) { wrap.appendChild(el); });
+        [
+          ['Event Name', nameInput],
+          ['Module', moduleSelect],
+          ['Registration Start', regStartInput],
+          ['Registration End', regEndInput],
+          ['End Date (Archive)', endDateInput],
+          ['Visibility', visSelect]
+        ].forEach(function (pair) { wrap.appendChild(fieldGroup(pair[0], pair[1])); });
+        var saveGroup = document.createElement('div');
+        saveGroup.className = 'fieldGroup';
+        var spacer = document.createElement('label');
+        spacer.innerHTML = '&nbsp;';
+        saveGroup.appendChild(spacer);
+        saveGroup.appendChild(saveBtn);
+        wrap.appendChild(saveGroup);
         return wrap;
       }
 
