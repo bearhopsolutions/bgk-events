@@ -473,6 +473,11 @@
           closed.textContent = 'Enrollment is not currently open for this challenge.';
           main.appendChild(closed);
         }
+      } else if (!data.myPaid) {
+        var waiting = document.createElement('div');
+        waiting.className = 'empty';
+        waiting.textContent = "You're enrolled — waiting for an admin to confirm your payment before you can submit weigh-ins.";
+        main.appendChild(waiting);
       } else {
         var subTitle = document.createElement('h2');
         subTitle.className = 'section-title';
