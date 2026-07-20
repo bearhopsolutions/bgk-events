@@ -91,6 +91,11 @@
     }
     .card button:hover { background: #009b80; }
     .card button:disabled { background: #aaa; cursor: default; }
+    .card .btn-small { width: auto; padding: 4px 8px; margin-top: 0; font-size: 12px; }
+    .rangeRow { display: flex; gap: 8px; margin-bottom: 6px; align-items: center; }
+    .rangeRow input[type=date] { width: auto; }
+    .tagRow { display: flex; align-items: center; gap: 6px; margin: 6px 0; }
+    .tagRow input { width: auto; }
     .card button .spinner { border-color: rgba(255,255,255,0.4); border-top-color: white; }
     .msg { font-size: 13px; margin-top: 10px; text-align: center; }
     .msg.error { color: #c0392b; }
@@ -408,9 +413,226 @@
     function routeToEvent(ev) {
       if (ev.moduleType === 'WeightLoss') {
         showWeightLossModule(ev.eventId);
+      } else if (ev.moduleType === 'Camping') {
+        showCampingModule(ev.eventId);
       } else {
         showEventPlaceholder(ev);
       }
+    }
+
+    // ---------- Camping module ----------
+
+    var CAMPING_TAGS = [
+      { value: 'HolidayWeekend', label: 'Holiday Weekend' },
+      { value: 'WeekendsOnly', label: 'Weekends Only' },
+      { value: 'BackToBackTrips', label: 'Back-to-Back Trips' }
+    ];
+
+    function campingTagLabel(value) {
+      var match = CAMPING_TAGS.filter(function (t) { return t.value === value; })[0];
+      return match ? match.label : value;
+    }
+
+    function showCampingModule(eventId) {
+      var main = document.getElementById('mainContent');
+      showLoadingRow(main, 'Loading camping season…');
+      var token = localStorage.getItem(TOKEN_KEY);
+      callApi('/api/camping/module', { token: token, eventId: eventId })
+        .then(function (data) { renderCampingModule(data, eventId); })
+        .catch(function (err) {
+          main.innerHTML = '';
+          var errDiv = document.createElement('div');
+          errDiv.className = 'msg error';
+          errDiv.textContent = err.message;
+          main.appendChild(errDiv);
+        });
+    }
+
+    function renderCampingModule(data, eventId) {
+      var main = document.getElementById('mainContent');
+      main.innerHTML = '';
+
+      var h = document.createElement('h2');
+      h.className = 'section-title';
+      h.textContent = data.name + ' — ' + data.status;
+      main.appendChild(h);
+
+      if (!data.isRegistered) {
+        if (data.status === 'Enrolling') {
+          main.appendChild(renderCampingForm(eventId));
+        } else {
+          var closed = document.createElement('div');
+          closed.className = 'empty';
+          closed.textContent = 'Registration is not currently open for this camping season.';
+          main.appendChild(closed);
+        }
+      } else {
+        var p = data.myPreferences;
+        var dateText = p.dateRanges.length
+          ? p.dateRanges.map(function (r) { return r.start + ' to ' + r.end; }).join(', ')
+          : (p.anyDatesOk ? 'Any dates' : '—');
+        var summary = document.createElement('div');
+        summary.className = 'card';
+        summary.style.width = 'auto';
+        summary.style.maxWidth = '420px';
+        summary.style.marginBottom = '20px';
+        var summaryLines = [
+          '<strong>Your preferences</strong>',
+          'Spot length: ' + p.spotLengthFeet + ' ft',
+          'Dates: ' + dateText + (p.anyDatesOk && p.dateRanges.length ? ' (or flexible)' : ''),
+          p.tags.length ? 'Tags: ' + p.tags.map(campingTagLabel).join(', ') : null,
+          p.preferredCampgrounds ? 'Preferred campgrounds: ' + p.preferredCampgrounds : null
+        ].filter(Boolean);
+        summary.innerHTML = summaryLines.join('<br>');
+        main.appendChild(summary);
+      }
+
+      var tripsTitle = document.createElement('h2');
+      tripsTitle.className = 'section-title';
+      tripsTitle.textContent = 'My Trips';
+      main.appendChild(tripsTitle);
+
+      if (!data.myTrips.length) {
+        var empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'No trips assigned yet.';
+        main.appendChild(empty);
+      } else {
+        var table = document.createElement('table');
+        table.innerHTML = '<tr><th>Trip</th><th>Dates</th><th>Spot</th><th>Reserve</th></tr>';
+        data.myTrips.forEach(function (t) {
+          var tr = document.createElement('tr');
+          var linkCell = t.reservationLink ? '<a href="' + t.reservationLink + '" target="_blank">Reserve</a>' : '—';
+          tr.innerHTML = '<td>' + t.tripName + '</td><td>' + t.startDate + ' to ' + t.endDate + '</td><td>' + (t.spotAssigned || '—') + '</td><td>' + linkCell + '</td>';
+          table.appendChild(tr);
+        });
+        main.appendChild(table);
+      }
+    }
+
+    function renderCampingForm(eventId) {
+      var wrap = document.createElement('div');
+      wrap.className = 'card';
+      wrap.style.width = 'auto';
+      wrap.style.maxWidth = '420px';
+
+      var lenLabel = document.createElement('label');
+      lenLabel.textContent = 'Spot length needed (feet)';
+      var lenInput = document.createElement('input');
+      lenInput.type = 'number';
+      wrap.appendChild(lenLabel);
+      wrap.appendChild(lenInput);
+
+      var anyLabel = document.createElement('label');
+      anyLabel.className = 'tagRow';
+      anyLabel.style.marginTop = '12px';
+      var anyCheckbox = document.createElement('input');
+      anyCheckbox.type = 'checkbox';
+      anyLabel.appendChild(anyCheckbox);
+      anyLabel.appendChild(document.createTextNode('Any dates work for me'));
+      wrap.appendChild(anyLabel);
+
+      var rangesLabel = document.createElement('label');
+      rangesLabel.textContent = 'Preferred date ranges';
+      rangesLabel.style.marginTop = '12px';
+      wrap.appendChild(rangesLabel);
+
+      var rangesHolder = document.createElement('div');
+      wrap.appendChild(rangesHolder);
+
+      function addRangeRow() {
+        var row = document.createElement('div');
+        row.className = 'rangeRow';
+        var startInput = document.createElement('input');
+        startInput.type = 'date';
+        var endInput = document.createElement('input');
+        endInput.type = 'date';
+        var removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.textContent = '✕';
+        removeBtn.className = 'btn-small';
+        removeBtn.onclick = function () { row.remove(); };
+        row.appendChild(startInput);
+        row.appendChild(endInput);
+        row.appendChild(removeBtn);
+        rangesHolder.appendChild(row);
+      }
+      addRangeRow();
+
+      var addRangeBtn = document.createElement('button');
+      addRangeBtn.type = 'button';
+      addRangeBtn.textContent = '+ Add another date range';
+      addRangeBtn.className = 'btn-small';
+      addRangeBtn.onclick = addRangeRow;
+      wrap.appendChild(addRangeBtn);
+
+      var tagsLabel = document.createElement('label');
+      tagsLabel.textContent = 'Preferences';
+      tagsLabel.style.marginTop = '12px';
+      wrap.appendChild(tagsLabel);
+
+      var tagCheckboxes = {};
+      CAMPING_TAGS.forEach(function (tag) {
+        var tagRow = document.createElement('label');
+        tagRow.className = 'tagRow';
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        tagCheckboxes[tag.value] = cb;
+        tagRow.appendChild(cb);
+        tagRow.appendChild(document.createTextNode(tag.label));
+        wrap.appendChild(tagRow);
+      });
+
+      var campLabel = document.createElement('label');
+      campLabel.textContent = 'Preferred campgrounds';
+      campLabel.style.marginTop = '12px';
+      var campInput = document.createElement('input');
+      campInput.type = 'text';
+      campInput.placeholder = 'e.g. Elk Creek, Prairie Ridge';
+      wrap.appendChild(campLabel);
+      wrap.appendChild(campInput);
+
+      var submitBtn = document.createElement('button');
+      submitBtn.style.marginTop = '18px';
+      submitBtn.innerHTML = '<span class="btnLabel">Submit Preferences</span>';
+      var msg = document.createElement('div');
+      msg.className = 'msg';
+
+      submitBtn.onclick = function () {
+        if (!lenInput.value) { msg.textContent = 'Enter your spot length.'; msg.className = 'msg error'; return; }
+
+        var dateRanges = [];
+        Array.prototype.forEach.call(rangesHolder.children, function (row) {
+          var inputs = row.querySelectorAll('input[type=date]');
+          if (inputs[0].value && inputs[1].value) {
+            dateRanges.push({ start: inputs[0].value, end: inputs[1].value });
+          }
+        });
+
+        var tags = Object.keys(tagCheckboxes).filter(function (t) { return tagCheckboxes[t].checked; });
+
+        var token = localStorage.getItem(TOKEN_KEY);
+        setButtonLoading(submitBtn, true, 'Submitting…');
+        callApi('/api/camping/register', {
+          token: token,
+          eventId: eventId,
+          spotLengthFeet: lenInput.value,
+          anyDatesOk: anyCheckbox.checked,
+          tags: tags,
+          preferredCampgrounds: campInput.value,
+          dateRanges: dateRanges
+        })
+          .then(function () { showCampingModule(eventId); })
+          .catch(function (err) {
+            setButtonLoading(submitBtn, false);
+            msg.textContent = err.message;
+            msg.className = 'msg error';
+          });
+      };
+
+      wrap.appendChild(submitBtn);
+      wrap.appendChild(msg);
+      return wrap;
     }
 
     // ---------- Weight Loss Challenge module ----------
