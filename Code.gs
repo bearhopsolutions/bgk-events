@@ -48,6 +48,14 @@ function jsonOutput_(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+// Run this once from the Apps Script editor (select "authorizeDrive", click Run) if you see
+// "You do not have permission to call DriveApp.createFolder" — it forces Google to prompt for
+// the Drive scope, which the deployed web app can't request on its own mid-request.
+function authorizeDrive() {
+  DriveApp.getRootFolder();
+  return 'Drive access authorized.';
+}
+
 // Run this once from the Apps Script editor (select "setup" in the function dropdown, click Run).
 // NOTE: this clears and re-seeds Users/Events/Enrollments — if you've already added other
 // users by hand, note them down before re-running this.
