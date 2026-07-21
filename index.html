@@ -672,6 +672,7 @@
           jLabel.textContent = 'Starting weight (lbs)';
           var weightInput = document.createElement('input');
           weightInput.type = 'number';
+          weightInput.step = '0.1';
           var joinBtn = document.createElement('button');
           joinBtn.innerHTML = '<span class="btnLabel">Join Challenge</span>';
           var joinMsg = document.createElement('div');
@@ -714,6 +715,7 @@
         wLabel.textContent = 'Weight (lbs)';
         var wInput = document.createElement('input');
         wInput.type = 'number';
+        wInput.step = '0.1';
         var pLabel = document.createElement('label');
         pLabel.textContent = 'Scale photo';
         var pInput = document.createElement('input');
