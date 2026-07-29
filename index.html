@@ -11,6 +11,32 @@
       --ink: #1a1a1a;
       --border: #d8d8d8;
       --bg: #f7f7f7;
+      --card-bg: #ffffff;
+      --text-muted: #555;
+      --err: #c0392b;
+      --ok: #1e8449;
+    }
+    :root[data-theme="dark"] {
+      --ink: #eee;
+      --border: #3a3d42;
+      --bg: #16181c;
+      --card-bg: #23262b;
+      --text-muted: #aaa;
+      --err: #ff6b5e;
+      --ok: #4ade80;
+      --teal-dark: #00c9a7;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --ink: #eee;
+        --border: #3a3d42;
+        --bg: #16181c;
+        --card-bg: #23262b;
+        --text-muted: #aaa;
+        --err: #ff6b5e;
+        --ok: #4ade80;
+        --teal-dark: #00c9a7;
+      }
     }
     * { box-sizing: border-box; }
     body {
@@ -24,7 +50,7 @@
     .spinner {
       width: 18px;
       height: 18px;
-      border: 3px solid rgba(0,0,0,0.15);
+      border: 3px solid rgba(128,128,128,0.25);
       border-top-color: var(--teal-dark);
       border-radius: 50%;
       animation: spin 0.7s linear infinite;
@@ -45,9 +71,9 @@
       z-index: 100;
     }
     #pageLoading .spinner { width: 32px; height: 32px; border-width: 4px; }
-    #pageLoading span { color: #666; font-size: 14px; }
+    #pageLoading span { color: var(--text-muted); font-size: 14px; }
 
-    .loadingRow { display: flex; align-items: center; gap: 8px; color: #666; font-size: 14px; padding: 8px 0; }
+    .loadingRow { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 14px; padding: 8px 0; }
 
     /* Login */
     #loginScreen {
@@ -57,7 +83,7 @@
       justify-content: center;
     }
     .card {
-      background: white;
+      background: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: 10px;
       padding: 32px;
@@ -65,13 +91,16 @@
       box-shadow: 0 2px 10px rgba(0,0,0,0.06);
     }
     .card h1 { margin: 0 0 20px; font-size: 22px; text-align: center; }
-    .card label { display: block; font-size: 13px; margin: 12px 0 4px; color: #555; }
-    .card input {
+    .card label { display: block; font-size: 13px; margin: 12px 0 4px; color: var(--text-muted); }
+    .card input, .card select, .card textarea {
       width: 100%;
       padding: 9px 10px;
       border: 1px solid var(--border);
       border-radius: 6px;
       font-size: 14px;
+      background: var(--card-bg);
+      color: var(--ink);
+      font-family: inherit;
     }
     .card button {
       width: 100%;
@@ -92,14 +121,15 @@
     .card button:hover { background: #009b80; }
     .card button:disabled { background: #aaa; cursor: default; }
     .card .btn-small { width: auto; padding: 4px 8px; margin-top: 0; font-size: 12px; }
+    .card .btn-secondary { background: transparent; color: var(--ink); border: 1px solid var(--border); }
     .rangeRow { display: flex; gap: 8px; margin-bottom: 6px; align-items: center; }
     .rangeRow input[type=date] { width: auto; }
     .tagRow { display: flex; align-items: center; gap: 6px; margin: 6px 0; }
     .tagRow input { width: auto; }
     .card button .spinner { border-color: rgba(255,255,255,0.4); border-top-color: white; }
     .msg { font-size: 13px; margin-top: 10px; text-align: center; }
-    .msg.error { color: #c0392b; }
-    .msg.ok { color: #1e8449; }
+    .msg.error { color: var(--err); }
+    .msg.ok { color: var(--ok); }
 
     /* App shell */
     #appScreen { min-height: 100vh; }
@@ -110,10 +140,11 @@
       padding: 0 20px;
       height: 56px;
       flex-wrap: wrap;
+      gap: 4px;
     }
-    nav .brand { font-weight: 700; font-size: 18px; margin-right: 24px; }
+    nav .brand { font-weight: 700; font-size: 18px; margin-right: 24px; color: #0a0a0a; }
     nav a, nav .navlink {
-      color: var(--ink);
+      color: #0a0a0a;
       text-decoration: none;
       font-size: 14px;
       margin-right: 18px;
@@ -123,17 +154,47 @@
     nav a:hover, nav .navlink:hover { text-decoration: underline; }
     nav .spacer { flex: 1; }
 
+    .iconBtn {
+      background: rgba(0,0,0,0.08);
+      border: none;
+      border-radius: 999px;
+      width: 32px;
+      height: 32px;
+      font-size: 15px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 12px;
+    }
+    .iconBtn:hover { background: rgba(0,0,0,0.16); }
+
+    .pillBtn {
+      background: rgba(0,0,0,0.08);
+      border: none;
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      color: #0a0a0a;
+      margin-right: 12px;
+    }
+    .pillBtn:hover { background: rgba(0,0,0,0.16); }
+    .pillBtn.active { background: #0a0a0a; color: var(--teal); }
+
     main { max-width: 900px; margin: 0 auto; padding: 24px 20px; }
-    h2.section-title { font-size: 16px; text-transform: uppercase; letter-spacing: 0.04em; color: #555; margin: 24px 0 10px; }
+    h2.section-title { font-size: 16px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin: 24px 0 10px; }
 
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
     .eventCard {
-      background: white;
+      background: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 16px;
     }
-    .eventCard h3 { margin: 0 0 10px; font-size: 16px; }
+    .eventCard h3 { margin: 0 0 8px; font-size: 16px; }
+    .eventCard .desc { font-size: 13px; color: var(--text-muted); margin: 8px 0 12px; white-space: pre-wrap; }
     .eventCard button {
       padding: 6px 12px;
       border-radius: 6px;
@@ -144,9 +205,9 @@
       cursor: pointer;
     }
     .eventCard button:disabled { background: #aaa; cursor: default; }
-    .empty { color: #888; font-size: 14px; }
+    .empty { color: var(--text-muted); font-size: 14px; }
 
-    table { width: 100%; border-collapse: collapse; background: white; }
+    table { width: 100%; border-collapse: collapse; background: var(--card-bg); }
     th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 14px; }
 
     .actionBtn {
@@ -163,6 +224,47 @@
     }
     .actionBtn:disabled { background: #aaa; cursor: default; }
     .actionBtn .spinner { border-color: rgba(255,255,255,0.4); border-top-color: white; width: 14px; height: 14px; border-width: 2px; }
+    .actionBtn.secondary { background: transparent; color: var(--ink); border: 1px solid var(--border); }
+    .actionBtn.danger { background: var(--err); }
+
+    .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; margin-left: 8px; vertical-align: middle; }
+    .badge-Enrolling { background: rgba(0,178,148,0.15); color: var(--teal-dark); }
+    .badge-Active { background: rgba(51,85,204,0.15); color: #5577ee; }
+    .badge-Upcoming { background: rgba(122,63,209,0.15); color: #9966ee; }
+    .badge-Archived { background: rgba(120,120,120,0.15); color: var(--text-muted); }
+
+    .adminBanner { border: 1px dashed var(--teal-dark); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px; color: var(--text-muted); }
+
+    /* Rich text editor */
+    .rteToolbar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .rteToolbar button {
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      color: var(--ink);
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .rteToolbar button:hover { background: var(--bg); }
+    .rteBox {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      min-height: 100px;
+      background: var(--card-bg);
+      font-size: 14px;
+    }
+    .rteBox:focus { outline: 2px solid var(--teal-dark); }
+    .rteSource { width: 100%; min-height: 140px; font-family: monospace; font-size: 13px; }
+    .homeContent { font-size: 14px; line-height: 1.5; margin-bottom: 8px; }
+    .homeContent:empty::before { content: 'Nothing posted yet.'; color: var(--text-muted); }
+
+    .weighInCard { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; }
+    .weighInCard img { max-width: 240px; border-radius: 6px; display: block; margin: 10px 0; }
+    .weighInCard .fields { font-size: 14px; line-height: 1.6; }
+    .amendRow { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+    .amendRow input { width: 100px; padding: 7px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--ink); }
   </style>
 </head>
 <body>
@@ -189,9 +291,11 @@
   <div id="appScreen" class="hidden">
     <nav>
       <span class="brand">BGK Events</span>
-      <a class="navlink" onclick="showHome()">Home</a>
-      <span id="navEvents"></span>
+      <a class="navlink" onclick="navigateHome()">Home</a>
+      <span id="navModules"></span>
       <span class="spacer"></span>
+      <button class="iconBtn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
+      <span id="adminSwitchWrap"></span>
       <a class="navlink" onclick="doLogout()">Log Out</a>
     </nav>
     <main id="mainContent"></main>
@@ -200,8 +304,11 @@
   <script>
     var API_BASE = 'https://bearhop.taileae8f4.ts.net';
     var TOKEN_KEY = 'bgkEventsToken';
+    var THEME_KEY = 'bgkEventsTheme';
     var currentUser = null;
-    var currentData = null;
+    var currentData = null; // { upcoming, enrolling, active } from /api/events (nav visibility)
+    var viewMode = 'user'; // 'user' | 'admin' — only meaningful when currentUser.isAdmin
+    var currentRoute = { view: 'home' };
 
     function callApi(path, body) {
       return fetch(API_BASE + path, {
@@ -236,9 +343,44 @@
       container.appendChild(row);
     }
 
+    function showErrorIn(container, err) {
+      container.innerHTML = '';
+      var errDiv = document.createElement('div');
+      errDiv.className = 'msg error';
+      errDiv.textContent = err.message;
+      container.appendChild(errDiv);
+    }
+
     function hidePageLoading() {
       document.getElementById('pageLoading').classList.add('hidden');
     }
+
+    // ---------- Theme ----------
+
+    function initTheme() {
+      var saved = localStorage.getItem(THEME_KEY);
+      if (saved) document.documentElement.setAttribute('data-theme', saved);
+    }
+
+    function isDarkActive() {
+      var attr = document.documentElement.getAttribute('data-theme');
+      if (attr) return attr === 'dark';
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+
+    function toggleTheme() {
+      var next = isDarkActive() ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem(THEME_KEY, next);
+      updateThemeIcon();
+    }
+
+    function updateThemeIcon() {
+      var btn = document.getElementById('themeToggleBtn');
+      if (btn) btn.textContent = isDarkActive() ? '☀️' : '🌙';
+    }
+
+    // ---------- Auth ----------
 
     function doLogin() {
       var email = document.getElementById('loginEmail').value.trim();
@@ -276,92 +418,168 @@
     function enterApp() {
       document.getElementById('loginScreen').classList.add('hidden');
       document.getElementById('appScreen').classList.remove('hidden');
-      loadEvents();
+      updateThemeIcon();
+      renderAdminSwitch();
+      loadNavData();
     }
 
-    function loadEvents() {
+    // ---------- Nav ----------
+
+    function renderAdminSwitch() {
+      var wrap = document.getElementById('adminSwitchWrap');
+      wrap.innerHTML = '';
+      if (!currentUser || !currentUser.isAdmin) return;
+      var btn = document.createElement('button');
+      btn.className = 'pillBtn' + (viewMode === 'admin' ? ' active' : '');
+      btn.textContent = viewMode === 'admin' ? 'Admin View' : 'My View';
+      btn.onclick = function () {
+        viewMode = viewMode === 'admin' ? 'user' : 'admin';
+        renderAdminSwitch();
+        navigateHome();
+      };
+      wrap.appendChild(btn);
+    }
+
+    function qualifyingWeightLossEvents(data) {
+      var all = (data.enrolling || []).concat(data.active || []);
+      return all.filter(function (e) { return e.moduleType === 'WeightLoss' && (e.status === 'Enrolling' || e.isEnrolled); });
+    }
+
+    function renderModuleNav() {
+      var nav = document.getElementById('navModules');
+      nav.innerHTML = '';
+      if (!currentData) return;
+      var showWeightLoss = viewMode === 'admin' || qualifyingWeightLossEvents(currentData).length > 0;
+      if (showWeightLoss) {
+        var a = document.createElement('a');
+        a.className = 'navlink';
+        a.textContent = 'Weight Loss Challenge';
+        a.onclick = function () { navigateWeightLoss(); };
+        nav.appendChild(a);
+      }
+    }
+
+    function loadNavData() {
       var main = document.getElementById('mainContent');
-      showLoadingRow(main, 'Loading events…');
+      showLoadingRow(main, 'Loading…');
       var token = localStorage.getItem(TOKEN_KEY);
       callApi('/api/events', { token: token })
         .then(function (data) {
           currentData = data;
-          renderNav(data.active);
-          showHome();
+          renderModuleNav();
+          navigateHome();
         })
-        .catch(function (err) {
-          main.innerHTML = '';
-          var errDiv = document.createElement('div');
-          errDiv.className = 'msg error';
-          errDiv.textContent = err.message;
-          main.appendChild(errDiv);
-        });
+        .catch(function (err) { showErrorIn(main, err); });
     }
 
-    function renderNav(activeEvents) {
-      var nav = document.getElementById('navEvents');
-      nav.innerHTML = '';
-      activeEvents.forEach(function (ev) {
-        var a = document.createElement('a');
-        a.className = 'navlink';
-        a.textContent = ev.name;
-        a.onclick = function () { routeToEvent(ev); };
-        nav.appendChild(a);
+    function refreshNavData(then) {
+      var token = localStorage.getItem(TOKEN_KEY);
+      return callApi('/api/events', { token: token }).then(function (data) {
+        currentData = data;
+        renderModuleNav();
+        if (then) then();
       });
+    }
+
+    function navigateHome() {
+      currentRoute = { view: 'home' };
+      showHome();
+    }
+
+    function navigateWeightLoss() {
+      currentRoute = { view: 'weightloss' };
+      showWeightLossEntry();
+    }
+
+    // ---------- Home ----------
+
+    function eventStatusBadge(status) {
+      var span = document.createElement('span');
+      span.className = 'badge badge-' + status;
+      span.textContent = status;
+      return span;
+    }
+
+    function homeRelevantEvents(data) {
+      var items = [];
+      (data.upcoming || []).forEach(function (e) { if (e.isEnrolled) items.push(e); });
+      (data.enrolling || []).forEach(function (e) { items.push(e); });
+      (data.active || []).forEach(function (e) { if (e.isEnrolled) items.push(e); });
+      return items;
     }
 
     function showHome() {
       var main = document.getElementById('mainContent');
-      main.innerHTML = '';
-      main.appendChild(renderSection('Enrolling Now', currentData.enrolling));
-      main.appendChild(renderSection('Happening Now', currentData.active));
+      showLoadingRow(main, 'Loading home…');
+      var token = localStorage.getItem(TOKEN_KEY);
+      callApi('/api/home', { token: token })
+        .then(function (data) { renderHome(data); })
+        .catch(function (err) { showErrorIn(main, err); });
     }
 
-    function renderSection(title, events) {
-      var wrap = document.createElement('div');
-      var h = document.createElement('h2');
-      h.className = 'section-title';
-      h.textContent = title;
-      wrap.appendChild(h);
+    function renderHome(data) {
+      var main = document.getElementById('mainContent');
+      main.innerHTML = '';
 
-      if (!events.length) {
-        var empty = document.createElement('div');
-        empty.className = 'empty';
-        empty.textContent = 'Nothing here right now.';
-        wrap.appendChild(empty);
-        return wrap;
+      if (viewMode === 'admin') {
+        var banner = document.createElement('div');
+        banner.className = 'adminBanner';
+        banner.textContent = 'Admin View — edit the welcome message below. Everyone sees it on Home.';
+        main.appendChild(banner);
+        main.appendChild(renderHomeEditor(data.contentHtml || ''));
+      } else {
+        var content = document.createElement('div');
+        content.className = 'homeContent';
+        content.innerHTML = data.contentHtml || '';
+        main.appendChild(content);
       }
 
-      var grid = document.createElement('div');
-      grid.className = 'grid';
-      events.forEach(function (ev) {
-        var card = document.createElement('div');
-        card.className = 'eventCard';
-        var h3 = document.createElement('h3');
-        h3.textContent = ev.name;
-        card.appendChild(h3);
+      var relevant = homeRelevantEvents(data);
+      var title = document.createElement('h2');
+      title.className = 'section-title';
+      title.textContent = 'Your Events';
+      main.appendChild(title);
 
-        var btn = document.createElement('button');
-        btn.textContent = 'View';
-        btn.onclick = function () { routeToEvent(ev); };
-        card.appendChild(btn);
-        grid.appendChild(card);
-      });
-      wrap.appendChild(grid);
-      return wrap;
+      if (!relevant.length) {
+        var empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'Nothing enrolling right now, and you\'re not signed up for anything active.';
+        main.appendChild(empty);
+      } else {
+        var grid = document.createElement('div');
+        grid.className = 'grid';
+        relevant.forEach(function (ev) {
+          var card = document.createElement('div');
+          card.className = 'eventCard';
+          var h3 = document.createElement('h3');
+          h3.textContent = ev.name;
+          h3.appendChild(eventStatusBadge(ev.status));
+          card.appendChild(h3);
+          if (ev.description) {
+            var desc = document.createElement('div');
+            desc.className = 'desc';
+            desc.textContent = ev.description;
+            card.appendChild(desc);
+          }
+          var btn = document.createElement('button');
+          btn.textContent = 'View';
+          btn.onclick = function () { routeToEvent(ev); };
+          card.appendChild(btn);
+          grid.appendChild(card);
+        });
+        main.appendChild(grid);
+      }
     }
 
-    function refreshEventView(eventId) {
-      var token = localStorage.getItem(TOKEN_KEY);
-      callApi('/api/events', { token: token })
-        .then(function (data) {
-          currentData = data;
-          renderNav(data.active);
-          var all = data.enrolling.concat(data.active);
-          var ev = all.filter(function (e) { return e.eventId === eventId; })[0];
-          if (ev) { routeToEvent(ev); } else { showHome(); }
-        })
-        .catch(function (err) { alert(err.message); });
+    function routeToEvent(ev) {
+      if (ev.moduleType === 'WeightLoss') {
+        currentRoute = { view: 'weightloss-module', eventId: ev.eventId };
+        showWeightLossModule(ev.eventId);
+      } else if (ev.moduleType === 'Camping') {
+        showCampingModule(ev.eventId);
+      } else {
+        showEventPlaceholder(ev);
+      }
     }
 
     function showEventPlaceholder(ev) {
@@ -387,7 +605,7 @@
           var token = localStorage.getItem(TOKEN_KEY);
           setButtonLoading(registerBtn, true, 'Registering…');
           callApi('/api/events/enroll', { token: token, eventId: ev.eventId })
-            .then(function () { refreshEventView(ev.eventId); })
+            .then(function () { refreshNavData(navigateHome); })
             .catch(function (err) {
               setButtonLoading(registerBtn, false);
               msg.textContent = err.message;
@@ -410,14 +628,99 @@
       main.appendChild(p);
     }
 
-    function routeToEvent(ev) {
-      if (ev.moduleType === 'WeightLoss') {
-        showWeightLossModule(ev.eventId);
-      } else if (ev.moduleType === 'Camping') {
-        showCampingModule(ev.eventId);
-      } else {
-        showEventPlaceholder(ev);
+    // ---------- Rich text editor (Home content, admin only) ----------
+
+    function renderHomeEditor(initialHtml) {
+      var wrap = document.createElement('div');
+      wrap.style.marginBottom = '20px';
+
+      var toolbar = document.createElement('div');
+      toolbar.className = 'rteToolbar';
+
+      var rteBox = document.createElement('div');
+      rteBox.className = 'rteBox';
+      rteBox.contentEditable = 'true';
+      rteBox.innerHTML = initialHtml;
+
+      var sourceBox = document.createElement('textarea');
+      sourceBox.className = 'card rteSource hidden';
+      sourceBox.value = initialHtml;
+
+      var msg = document.createElement('div');
+      msg.className = 'msg';
+
+      function cmd(command, value) {
+        rteBox.focus();
+        document.execCommand(command, false, value || null);
       }
+
+      [
+        ['Bold', 'bold'], ['Italic', 'italic'], ['Underline', 'underline'],
+        ['• List', 'insertUnorderedList'], ['1. List', 'insertOrderedList']
+      ].forEach(function (pair) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = pair[0];
+        btn.onclick = function () { cmd(pair[1]); };
+        toolbar.appendChild(btn);
+      });
+
+      var linkBtn = document.createElement('button');
+      linkBtn.type = 'button';
+      linkBtn.textContent = 'Link';
+      linkBtn.onclick = function () {
+        var url = prompt('Link URL:');
+        if (url) cmd('createLink', url);
+      };
+      toolbar.appendChild(linkBtn);
+
+      var sourceToggleBtn = document.createElement('button');
+      sourceToggleBtn.type = 'button';
+      sourceToggleBtn.textContent = 'View HTML Source';
+      var inSourceMode = false;
+      sourceToggleBtn.onclick = function () {
+        if (inSourceMode) {
+          rteBox.innerHTML = sourceBox.value;
+          rteBox.classList.remove('hidden');
+          sourceBox.classList.add('hidden');
+          sourceToggleBtn.textContent = 'View HTML Source';
+        } else {
+          sourceBox.value = rteBox.innerHTML;
+          rteBox.classList.add('hidden');
+          sourceBox.classList.remove('hidden');
+          sourceToggleBtn.textContent = 'Back to Editor';
+        }
+        inSourceMode = !inSourceMode;
+      };
+      toolbar.appendChild(sourceToggleBtn);
+
+      wrap.appendChild(toolbar);
+      wrap.appendChild(rteBox);
+      wrap.appendChild(sourceBox);
+
+      var saveBtn = document.createElement('button');
+      saveBtn.className = 'actionBtn';
+      saveBtn.style.marginTop = '10px';
+      saveBtn.innerHTML = '<span class="btnLabel">Save</span>';
+      saveBtn.onclick = function () {
+        var html = inSourceMode ? sourceBox.value : rteBox.innerHTML;
+        var token = localStorage.getItem(TOKEN_KEY);
+        setButtonLoading(saveBtn, true, 'Saving…');
+        callApi('/api/admin/home/save', { token: token, html: html })
+          .then(function () {
+            setButtonLoading(saveBtn, false);
+            msg.textContent = 'Saved.';
+            msg.className = 'msg ok';
+          })
+          .catch(function (err) {
+            setButtonLoading(saveBtn, false);
+            msg.textContent = err.message;
+            msg.className = 'msg error';
+          });
+      };
+      wrap.appendChild(saveBtn);
+      wrap.appendChild(msg);
+      return wrap;
     }
 
     // ---------- Camping module ----------
@@ -439,13 +742,7 @@
       var token = localStorage.getItem(TOKEN_KEY);
       callApi('/api/camping/module', { token: token, eventId: eventId })
         .then(function (data) { renderCampingModule(data, eventId); })
-        .catch(function (err) {
-          main.innerHTML = '';
-          var errDiv = document.createElement('div');
-          errDiv.className = 'msg error';
-          errDiv.textContent = err.message;
-          main.appendChild(errDiv);
-        });
+        .catch(function (err) { showErrorIn(main, err); });
     }
 
     function renderCampingModule(data, eventId) {
@@ -635,7 +932,63 @@
       return wrap;
     }
 
-    // ---------- Weight Loss Challenge module ----------
+    // ---------- Weight Loss Challenge — entry (nav) ----------
+
+    function showWeightLossEntry() {
+      if (viewMode === 'admin') {
+        showAdminWeightLossHome();
+        return;
+      }
+      var list = qualifyingWeightLossEvents(currentData);
+      if (list.length === 0) {
+        var main = document.getElementById('mainContent');
+        main.innerHTML = '';
+        var h = document.createElement('h2');
+        h.className = 'section-title';
+        h.textContent = 'Weight Loss Challenge';
+        main.appendChild(h);
+        var empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'Nothing here right now.';
+        main.appendChild(empty);
+      } else if (list.length === 1) {
+        currentRoute = { view: 'weightloss-module', eventId: list[0].eventId };
+        showWeightLossModule(list[0].eventId);
+      } else {
+        renderWeightLossPicker(list);
+      }
+    }
+
+    function renderWeightLossPicker(list) {
+      var main = document.getElementById('mainContent');
+      main.innerHTML = '';
+      var h = document.createElement('h2');
+      h.className = 'section-title';
+      h.textContent = 'Weight Loss Challenge';
+      main.appendChild(h);
+
+      var grid = document.createElement('div');
+      grid.className = 'grid';
+      list.forEach(function (ev) {
+        var card = document.createElement('div');
+        card.className = 'eventCard';
+        var h3 = document.createElement('h3');
+        h3.textContent = ev.name;
+        h3.appendChild(eventStatusBadge(ev.status));
+        card.appendChild(h3);
+        var btn = document.createElement('button');
+        btn.textContent = 'View';
+        btn.onclick = function () {
+          currentRoute = { view: 'weightloss-module', eventId: ev.eventId };
+          showWeightLossModule(ev.eventId);
+        };
+        card.appendChild(btn);
+        grid.appendChild(card);
+      });
+      main.appendChild(grid);
+    }
+
+    // ---------- Weight Loss Challenge — participant view ----------
 
     function showWeightLossModule(eventId) {
       var main = document.getElementById('mainContent');
@@ -643,13 +996,7 @@
       var token = localStorage.getItem(TOKEN_KEY);
       callApi('/api/weightloss/module', { token: token, eventId: eventId })
         .then(function (data) { renderWeightLossModule(data, eventId); })
-        .catch(function (err) {
-          main.innerHTML = '';
-          var errDiv = document.createElement('div');
-          errDiv.className = 'msg error';
-          errDiv.textContent = err.message;
-          main.appendChild(errDiv);
-        });
+        .catch(function (err) { showErrorIn(main, err); });
     }
 
     function renderWeightLossModule(data, eventId) {
@@ -681,7 +1028,7 @@
             var token = localStorage.getItem(TOKEN_KEY);
             setButtonLoading(joinBtn, true, 'Joining…');
             callApi('/api/weightloss/join', { token: token, eventId: eventId, initialWeight: weightInput.value })
-              .then(function () { showWeightLossModule(eventId); })
+              .then(function () { refreshNavData(function () { showWeightLossModule(eventId); }); })
               .catch(function (err) {
                 setButtonLoading(joinBtn, false);
                 joinMsg.textContent = err.message;
@@ -779,7 +1126,352 @@
       main.appendChild(lbTable);
     }
 
+    // ---------- Weight Loss Challenge — admin view ----------
+
+    function showAdminWeightLossHome() {
+      var main = document.getElementById('mainContent');
+      showLoadingRow(main, 'Loading events…');
+      var token = localStorage.getItem(TOKEN_KEY);
+      callApi('/api/admin/events/list', { token: token })
+        .then(function (events) {
+          renderAdminWeightLossHome(events.filter(function (e) { return e.ModuleType === 'WeightLoss'; }));
+        })
+        .catch(function (err) { showErrorIn(main, err); });
+    }
+
+    function renderAdminWeightLossHome(events) {
+      var main = document.getElementById('mainContent');
+      main.innerHTML = '';
+
+      var h = document.createElement('h2');
+      h.className = 'section-title';
+      h.textContent = 'Weight Loss Challenge — Admin';
+      main.appendChild(h);
+
+      var createBtn = document.createElement('button');
+      createBtn.className = 'actionBtn';
+      createBtn.style.marginBottom = '18px';
+      createBtn.innerHTML = '<span class="btnLabel">+ Create Event</span>';
+      createBtn.onclick = function () { showAdminEventForm(null); };
+      main.appendChild(createBtn);
+
+      if (!events.length) {
+        var empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'No Weight Loss events yet.';
+        main.appendChild(empty);
+        return;
+      }
+
+      events.forEach(function (ev) {
+        var card = document.createElement('div');
+        card.className = 'eventCard';
+        card.style.marginBottom = '12px';
+        var h3 = document.createElement('h3');
+        h3.textContent = ev.EventName;
+        h3.appendChild(eventStatusBadge(ev.computedStatus));
+        card.appendChild(h3);
+
+        var meta = document.createElement('div');
+        meta.className = 'desc';
+        meta.textContent = 'Reg: ' + (ev.RegistrationStart || '—') + ' to ' + (ev.RegistrationEnd || '—') + ' · Ends: ' + (ev.EventEndDate || '—') + ' · Leaderboard: ' + (ev.LeaderboardFrequency || 'Weekly');
+        card.appendChild(meta);
+
+        var editBtn = document.createElement('button');
+        editBtn.textContent = 'Edit';
+        editBtn.style.marginRight = '8px';
+        editBtn.onclick = function () { showAdminEventForm(ev); };
+        card.appendChild(editBtn);
+
+        if (ev.computedStatus === 'Enrolling' || ev.computedStatus === 'Active') {
+          var manageBtn = document.createElement('button');
+          manageBtn.textContent = 'Manage';
+          manageBtn.onclick = function () { showAdminManageEvent(ev); };
+          card.appendChild(manageBtn);
+        }
+        main.appendChild(card);
+      });
+    }
+
+    function showAdminEventForm(existing) {
+      var main = document.getElementById('mainContent');
+      main.innerHTML = '';
+
+      var h = document.createElement('h2');
+      h.className = 'section-title';
+      h.textContent = existing ? 'Edit Event' : 'Create Event';
+      main.appendChild(h);
+
+      var form = document.createElement('div');
+      form.className = 'card';
+      form.style.width = 'auto';
+      form.style.maxWidth = '420px';
+
+      function field(labelText, input) {
+        var label = document.createElement('label');
+        label.textContent = labelText;
+        form.appendChild(label);
+        form.appendChild(input);
+      }
+
+      var nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.value = existing ? existing.EventName : '';
+      field('Event name', nameInput);
+
+      var descInput = document.createElement('textarea');
+      descInput.rows = 3;
+      descInput.value = existing ? (existing.Description || '') : '';
+      field('Description', descInput);
+
+      var visSelect = document.createElement('select');
+      ['All', 'Enrolled', 'Hidden'].forEach(function (v) {
+        var opt = document.createElement('option');
+        opt.value = v; opt.textContent = v;
+        if (existing && existing.Visibility === v) opt.selected = true;
+        visSelect.appendChild(opt);
+      });
+      field('Visibility', visSelect);
+
+      var regStartInput = document.createElement('input');
+      regStartInput.type = 'date';
+      regStartInput.value = existing ? (existing.RegistrationStart || '') : '';
+      field('Registration start', regStartInput);
+
+      var regEndInput = document.createElement('input');
+      regEndInput.type = 'date';
+      regEndInput.value = existing ? (existing.RegistrationEnd || '') : '';
+      field('Registration end', regEndInput);
+
+      var endDateInput = document.createElement('input');
+      endDateInput.type = 'date';
+      endDateInput.value = existing ? (existing.EventEndDate || '') : '';
+      field('Event end / archive date', endDateInput);
+
+      var freqSelect = document.createElement('select');
+      ['Daily', 'Weekly', 'Biweekly', 'Monthly'].forEach(function (f) {
+        var opt = document.createElement('option');
+        opt.value = f; opt.textContent = f;
+        if (existing ? existing.LeaderboardFrequency === f : f === 'Weekly') opt.selected = true;
+        freqSelect.appendChild(opt);
+      });
+      field('Leaderboard screenshot frequency', freqSelect);
+
+      var msg = document.createElement('div');
+      msg.className = 'msg';
+
+      var saveBtn = document.createElement('button');
+      saveBtn.innerHTML = '<span class="btnLabel">Save</span>';
+      saveBtn.onclick = function () {
+        if (!nameInput.value.trim()) { msg.textContent = 'Enter an event name.'; msg.className = 'msg error'; return; }
+        var token = localStorage.getItem(TOKEN_KEY);
+        var event = {
+          EventID: existing ? existing.EventID : undefined,
+          EventName: nameInput.value.trim(),
+          ModuleType: 'WeightLoss',
+          Visibility: visSelect.value,
+          RegistrationStart: regStartInput.value,
+          RegistrationEnd: regEndInput.value,
+          EventEndDate: endDateInput.value,
+          Description: descInput.value,
+          LeaderboardFrequency: freqSelect.value
+        };
+        setButtonLoading(saveBtn, true, 'Saving…');
+        callApi('/api/admin/events/save', { token: token, event: event })
+          .then(function () { refreshNavData(showAdminWeightLossHome); })
+          .catch(function (err) {
+            setButtonLoading(saveBtn, false);
+            msg.textContent = err.message;
+            msg.className = 'msg error';
+          });
+      };
+      form.appendChild(saveBtn);
+
+      var cancelBtn = document.createElement('button');
+      cancelBtn.className = 'btn-secondary';
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.onclick = function () { showAdminWeightLossHome(); };
+      form.appendChild(cancelBtn);
+
+      form.appendChild(msg);
+      main.appendChild(form);
+    }
+
+    function showAdminManageEvent(ev) {
+      var main = document.getElementById('mainContent');
+      main.innerHTML = '';
+
+      var back = document.createElement('a');
+      back.className = 'navlink';
+      back.style.display = 'inline-block';
+      back.style.marginBottom = '10px';
+      back.textContent = '← Back to Weight Loss Admin';
+      back.onclick = function () { showAdminWeightLossHome(); };
+      main.appendChild(back);
+
+      var h = document.createElement('h2');
+      h.className = 'section-title';
+      h.textContent = ev.EventName;
+      h.appendChild(eventStatusBadge(ev.computedStatus));
+      main.appendChild(h);
+
+      var pendingTitle = document.createElement('h2');
+      pendingTitle.className = 'section-title';
+      pendingTitle.textContent = 'Pending Screenshots';
+      main.appendChild(pendingTitle);
+      var pendingContainer = document.createElement('div');
+      main.appendChild(pendingContainer);
+      loadAdminPending(ev.EventID, pendingContainer);
+
+      var participantsTitle = document.createElement('h2');
+      participantsTitle.className = 'section-title';
+      participantsTitle.textContent = 'Participants';
+      main.appendChild(participantsTitle);
+      var participantsContainer = document.createElement('div');
+      main.appendChild(participantsContainer);
+      loadAdminParticipants(ev.EventID, participantsContainer);
+    }
+
+    function loadAdminPending(eventId, container) {
+      showLoadingRow(container, 'Loading screenshots…');
+      var token = localStorage.getItem(TOKEN_KEY);
+      callApi('/api/admin/weightloss/pending', { token: token, eventId: eventId })
+        .then(function (items) { renderAdminPending(items, eventId, container); })
+        .catch(function (err) { showErrorIn(container, err); });
+    }
+
+    function renderAdminPending(items, eventId, container) {
+      container.innerHTML = '';
+      if (!items.length) {
+        var empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'Nothing waiting on verification.';
+        container.appendChild(empty);
+        return;
+      }
+      items.forEach(function (item) {
+        container.appendChild(renderPendingCard(item, eventId, container));
+      });
+    }
+
+    function renderPendingCard(item, eventId, container) {
+      var card = document.createElement('div');
+      card.className = 'weighInCard';
+
+      var fields = document.createElement('div');
+      fields.className = 'fields';
+      fields.innerHTML =
+        '<div><strong>Email:</strong> ' + item.email + '</div>' +
+        '<div><strong>Name:</strong> ' + item.name + '</div>' +
+        '<div><strong>Week:</strong> ' + item.week + '</div>' +
+        '<div><strong>Weight:</strong> ' + item.weight + '</div>';
+      card.appendChild(fields);
+
+      if (item.photoUrl) {
+        var img = document.createElement('img');
+        img.src = item.photoUrl;
+        card.appendChild(img);
+      }
+
+      var actions = document.createElement('div');
+      actions.style.display = 'flex';
+      actions.style.gap = '8px';
+
+      var verifyBtn = document.createElement('button');
+      verifyBtn.className = 'actionBtn';
+      verifyBtn.innerHTML = '<span class="btnLabel">Verify</span>';
+      verifyBtn.onclick = function () {
+        var token = localStorage.getItem(TOKEN_KEY);
+        setButtonLoading(verifyBtn, true, 'Verifying…');
+        callApi('/api/admin/weightloss/verify', { token: token, eventId: eventId, email: item.email, week: item.week })
+          .then(function () { loadAdminPending(eventId, container); })
+          .catch(function (err) { setButtonLoading(verifyBtn, false); alert(err.message); });
+      };
+      actions.appendChild(verifyBtn);
+
+      var amendBtn = document.createElement('button');
+      amendBtn.className = 'actionBtn secondary';
+      amendBtn.innerHTML = '<span class="btnLabel">Amend Weight</span>';
+      var amendRow = document.createElement('div');
+      amendRow.className = 'amendRow hidden';
+      var amendInput = document.createElement('input');
+      amendInput.type = 'number';
+      amendInput.step = '0.1';
+      amendInput.value = item.weight;
+      var amendSaveBtn = document.createElement('button');
+      amendSaveBtn.className = 'actionBtn';
+      amendSaveBtn.innerHTML = '<span class="btnLabel">Save</span>';
+      amendSaveBtn.onclick = function () {
+        var token = localStorage.getItem(TOKEN_KEY);
+        setButtonLoading(amendSaveBtn, true, 'Saving…');
+        callApi('/api/admin/weightloss/amend', { token: token, eventId: eventId, email: item.email, week: item.week, newWeight: amendInput.value })
+          .then(function () { loadAdminPending(eventId, container); })
+          .catch(function (err) { setButtonLoading(amendSaveBtn, false); alert(err.message); });
+      };
+      var amendCancelBtn = document.createElement('button');
+      amendCancelBtn.className = 'actionBtn secondary';
+      amendCancelBtn.innerHTML = '<span class="btnLabel">Cancel</span>';
+      amendCancelBtn.onclick = function () { amendRow.classList.add('hidden'); };
+      amendRow.appendChild(amendInput);
+      amendRow.appendChild(amendSaveBtn);
+      amendRow.appendChild(amendCancelBtn);
+
+      amendBtn.onclick = function () { amendRow.classList.remove('hidden'); };
+      actions.appendChild(amendBtn);
+
+      card.appendChild(actions);
+      card.appendChild(amendRow);
+      return card;
+    }
+
+    function loadAdminParticipants(eventId, container) {
+      showLoadingRow(container, 'Loading participants…');
+      var token = localStorage.getItem(TOKEN_KEY);
+      callApi('/api/admin/weightloss/participants', { token: token, eventId: eventId })
+        .then(function (participants) { renderAdminParticipants(participants, eventId, container); })
+        .catch(function (err) { showErrorIn(container, err); });
+    }
+
+    function renderAdminParticipants(participants, eventId, container) {
+      container.innerHTML = '';
+      if (!participants.length) {
+        var empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'No participants yet.';
+        container.appendChild(empty);
+        return;
+      }
+      var table = document.createElement('table');
+      table.innerHTML = '<tr><th>Name</th><th>Email</th><th>Paid</th></tr>';
+      participants.forEach(function (p) {
+        var tr = document.createElement('tr');
+        var nameTd = document.createElement('td');
+        nameTd.textContent = p.name;
+        var emailTd = document.createElement('td');
+        emailTd.textContent = p.email;
+        var paidTd = document.createElement('td');
+        var btn = document.createElement('button');
+        btn.className = 'actionBtn' + (p.paid ? '' : ' secondary');
+        btn.innerHTML = '<span class="btnLabel">' + (p.paid ? 'Paid ✓' : 'Mark Paid') + '</span>';
+        btn.onclick = function () {
+          var token = localStorage.getItem(TOKEN_KEY);
+          setButtonLoading(btn, true, 'Updating…');
+          callApi('/api/admin/weightloss/setpaid', { token: token, eventId: eventId, email: p.email, paid: !p.paid })
+            .then(function () { loadAdminParticipants(eventId, container); })
+            .catch(function (err) { setButtonLoading(btn, false); alert(err.message); });
+        };
+        paidTd.appendChild(btn);
+        tr.appendChild(nameTd);
+        tr.appendChild(emailTd);
+        tr.appendChild(paidTd);
+        table.appendChild(tr);
+      });
+      container.appendChild(table);
+    }
+
     // ---------- boot ----------
+
+    initTheme();
 
     (function boot() {
       var token = localStorage.getItem(TOKEN_KEY);
