@@ -526,7 +526,7 @@
         banner.className = 'adminBanner';
         banner.textContent = 'Admin View — edit the welcome message below. Everyone sees it on Home.';
         main.appendChild(banner);
-        main.appendChild(renderHomeEditor(data.contentHtml || ''));
+        main.appendChild(renderContentEditor(data.contentHtml || '', '/api/admin/home/save'));
       } else {
         var content = document.createElement('div');
         content.className = 'homeContent';
@@ -628,9 +628,29 @@
       main.appendChild(p);
     }
 
-    // ---------- Rich text editor (Home content, admin only) ----------
+    // ---------- Rich text editor (admin-editable content blocks) ----------
 
-    function renderHomeEditor(initialHtml) {
+    function fetchWeightLossContent() {
+      var token = localStorage.getItem(TOKEN_KEY);
+      return callApi('/api/weightloss/content', { token: token }).then(function (res) { return res.contentHtml || ''; });
+    }
+
+    function renderWeightLossBanner(main, contentHtml) {
+      if (viewMode === 'admin') {
+        var banner = document.createElement('div');
+        banner.className = 'adminBanner';
+        banner.textContent = 'Admin View — edit the message below. Everyone sees it above Weight Loss Challenge.';
+        main.appendChild(banner);
+        main.appendChild(renderContentEditor(contentHtml || '', '/api/admin/weightloss/content/save'));
+      } else if (contentHtml && contentHtml.trim()) {
+        var content = document.createElement('div');
+        content.className = 'homeContent';
+        content.innerHTML = contentHtml;
+        main.appendChild(content);
+      }
+    }
+
+    function renderContentEditor(initialHtml, saveEndpoint) {
       var wrap = document.createElement('div');
       wrap.style.marginBottom = '20px';
 
@@ -706,7 +726,7 @@
         var html = inSourceMode ? sourceBox.value : rteBox.innerHTML;
         var token = localStorage.getItem(TOKEN_KEY);
         setButtonLoading(saveBtn, true, 'Saving…');
-        callApi('/api/admin/home/save', { token: token, html: html })
+        callApi(saveEndpoint, { token: token, html: html })
           .then(function () {
             setButtonLoading(saveBtn, false);
             msg.textContent = 'Saved.';
@@ -941,27 +961,46 @@
       }
       var list = qualifyingWeightLossEvents(currentData);
       if (list.length === 0) {
-        var main = document.getElementById('mainContent');
-        main.innerHTML = '';
-        var h = document.createElement('h2');
-        h.className = 'section-title';
-        h.textContent = 'Weight Loss Challenge';
-        main.appendChild(h);
-        var empty = document.createElement('div');
-        empty.className = 'empty';
-        empty.textContent = 'Nothing here right now.';
-        main.appendChild(empty);
+        showWeightLossEmpty();
       } else if (list.length === 1) {
         currentRoute = { view: 'weightloss-module', eventId: list[0].eventId };
         showWeightLossModule(list[0].eventId);
       } else {
-        renderWeightLossPicker(list);
+        showWeightLossPickerScreen(list);
       }
     }
 
-    function renderWeightLossPicker(list) {
+    function showWeightLossEmpty() {
+      var main = document.getElementById('mainContent');
+      showLoadingRow(main, 'Loading…');
+      fetchWeightLossContent()
+        .then(function (contentHtml) {
+          main.innerHTML = '';
+          renderWeightLossBanner(main, contentHtml);
+          var h = document.createElement('h2');
+          h.className = 'section-title';
+          h.textContent = 'Weight Loss Challenge';
+          main.appendChild(h);
+          var empty = document.createElement('div');
+          empty.className = 'empty';
+          empty.textContent = 'Nothing here right now.';
+          main.appendChild(empty);
+        })
+        .catch(function (err) { showErrorIn(main, err); });
+    }
+
+    function showWeightLossPickerScreen(list) {
+      var main = document.getElementById('mainContent');
+      showLoadingRow(main, 'Loading…');
+      fetchWeightLossContent()
+        .then(function (contentHtml) { renderWeightLossPicker(list, contentHtml); })
+        .catch(function (err) { showErrorIn(main, err); });
+    }
+
+    function renderWeightLossPicker(list, contentHtml) {
       var main = document.getElementById('mainContent');
       main.innerHTML = '';
+      renderWeightLossBanner(main, contentHtml);
       var h = document.createElement('h2');
       h.className = 'section-title';
       h.textContent = 'Weight Loss Challenge';
@@ -994,14 +1033,18 @@
       var main = document.getElementById('mainContent');
       showLoadingRow(main, 'Loading challenge…');
       var token = localStorage.getItem(TOKEN_KEY);
-      callApi('/api/weightloss/module', { token: token, eventId: eventId })
-        .then(function (data) { renderWeightLossModule(data, eventId); })
+      Promise.all([
+        callApi('/api/weightloss/module', { token: token, eventId: eventId }),
+        fetchWeightLossContent()
+      ])
+        .then(function (results) { renderWeightLossModule(results[0], eventId, results[1]); })
         .catch(function (err) { showErrorIn(main, err); });
     }
 
-    function renderWeightLossModule(data, eventId) {
+    function renderWeightLossModule(data, eventId, contentHtml) {
       var main = document.getElementById('mainContent');
       main.innerHTML = '';
+      renderWeightLossBanner(main, contentHtml);
 
       var h = document.createElement('h2');
       h.className = 'section-title';
@@ -1132,16 +1175,21 @@
       var main = document.getElementById('mainContent');
       showLoadingRow(main, 'Loading events…');
       var token = localStorage.getItem(TOKEN_KEY);
-      callApi('/api/admin/events/list', { token: token })
-        .then(function (events) {
-          renderAdminWeightLossHome(events.filter(function (e) { return e.ModuleType === 'WeightLoss'; }));
+      Promise.all([
+        callApi('/api/admin/events/list', { token: token }),
+        fetchWeightLossContent()
+      ])
+        .then(function (results) {
+          var events = results[0].filter(function (e) { return e.ModuleType === 'WeightLoss'; });
+          renderAdminWeightLossHome(events, results[1]);
         })
         .catch(function (err) { showErrorIn(main, err); });
     }
 
-    function renderAdminWeightLossHome(events) {
+    function renderAdminWeightLossHome(events, contentHtml) {
       var main = document.getElementById('mainContent');
       main.innerHTML = '';
+      renderWeightLossBanner(main, contentHtml);
 
       var h = document.createElement('h2');
       h.className = 'section-title';
