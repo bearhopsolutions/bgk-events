@@ -1091,6 +1091,11 @@
         waiting.className = 'empty';
         waiting.textContent = "You're enrolled — waiting for an admin to confirm your payment before you can submit weigh-ins.";
         main.appendChild(waiting);
+      } else if (data.status !== 'Active') {
+        var notActive = document.createElement('div');
+        notActive.className = 'empty';
+        notActive.textContent = "You're all set — weigh-ins open once the challenge becomes active.";
+        main.appendChild(notActive);
       } else {
         var subTitle = document.createElement('h2');
         subTitle.className = 'section-title';
@@ -1255,11 +1260,11 @@
       form.style.width = 'auto';
       form.style.maxWidth = '420px';
 
-      function field(labelText, input) {
+      function field(labelText, input, container) {
         var label = document.createElement('label');
         label.textContent = labelText;
-        form.appendChild(label);
-        form.appendChild(input);
+        (container || form).appendChild(label);
+        (container || form).appendChild(input);
       }
 
       var nameInput = document.createElement('input');
@@ -1296,6 +1301,9 @@
       endDateInput.value = existing ? (existing.EventEndDate || '') : '';
       field('Event end / archive date', endDateInput);
 
+      var WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      var ORDINALS = ['First', 'Second', 'Third', 'Fourth', 'Last'];
+
       var freqSelect = document.createElement('select');
       ['Daily', 'Weekly', 'Biweekly', 'Monthly'].forEach(function (f) {
         var opt = document.createElement('option');
@@ -1304,6 +1312,90 @@
         freqSelect.appendChild(opt);
       });
       field('Leaderboard screenshot frequency', freqSelect);
+
+      var scheduleFields = document.createElement('div');
+      form.appendChild(scheduleFields);
+
+      var timeInput, daySelect, startDateInput, monthlyModeSelect, monthlyDateInput, monthlyOrdinalSelect, monthlyWeekdaySelect;
+
+      function renderScheduleFields() {
+        scheduleFields.innerHTML = '';
+
+        timeInput = document.createElement('input');
+        timeInput.type = 'time';
+        timeInput.value = (existing && existing.LeaderboardTime) || '13:00';
+        field('Time (Central)', timeInput, scheduleFields);
+
+        var freq = freqSelect.value;
+
+        if (freq === 'Weekly') {
+          daySelect = document.createElement('select');
+          WEEKDAY_NAMES.forEach(function (name, idx) {
+            var opt = document.createElement('option');
+            opt.value = idx; opt.textContent = name;
+            var dayVal = existing ? Number(existing.LeaderboardDayOfWeek) : 5;
+            if (idx === dayVal) opt.selected = true;
+            daySelect.appendChild(opt);
+          });
+          field('Day of week', daySelect, scheduleFields);
+        }
+
+        if (freq === 'Biweekly') {
+          startDateInput = document.createElement('input');
+          startDateInput.type = 'date';
+          startDateInput.value = (existing && existing.LeaderboardStartDate) || '';
+          field('Starting date', startDateInput, scheduleFields);
+        }
+
+        if (freq === 'Monthly') {
+          monthlyModeSelect = document.createElement('select');
+          [['date', 'On a specific date'], ['weekday', 'On a weekday pattern']].forEach(function (pair) {
+            var opt = document.createElement('option');
+            opt.value = pair[0]; opt.textContent = pair[1];
+            if (existing ? existing.LeaderboardMonthlyMode === pair[0] : pair[0] === 'date') opt.selected = true;
+            monthlyModeSelect.appendChild(opt);
+          });
+          field('Monthly pattern', monthlyModeSelect, scheduleFields);
+
+          var monthlySub = document.createElement('div');
+          scheduleFields.appendChild(monthlySub);
+
+          function renderMonthlySub() {
+            monthlySub.innerHTML = '';
+            if (monthlyModeSelect.value === 'weekday') {
+              monthlyOrdinalSelect = document.createElement('select');
+              ORDINALS.forEach(function (o) {
+                var opt = document.createElement('option');
+                opt.value = o; opt.textContent = o;
+                if (existing ? existing.LeaderboardMonthlyOrdinal === o : o === 'First') opt.selected = true;
+                monthlyOrdinalSelect.appendChild(opt);
+              });
+              field('Occurrence', monthlyOrdinalSelect, monthlySub);
+
+              monthlyWeekdaySelect = document.createElement('select');
+              WEEKDAY_NAMES.forEach(function (name, idx) {
+                var opt = document.createElement('option');
+                opt.value = idx; opt.textContent = name;
+                var dayVal = existing ? Number(existing.LeaderboardMonthlyWeekday) : 5;
+                if (idx === dayVal) opt.selected = true;
+                monthlyWeekdaySelect.appendChild(opt);
+              });
+              field('Day of week', monthlyWeekdaySelect, monthlySub);
+            } else {
+              monthlyDateInput = document.createElement('input');
+              monthlyDateInput.type = 'number';
+              monthlyDateInput.min = '1';
+              monthlyDateInput.max = '31';
+              monthlyDateInput.value = (existing && existing.LeaderboardMonthlyDate) || 1;
+              field('Day of month (1–31; uses the last day if a month is shorter)', monthlyDateInput, monthlySub);
+            }
+          }
+          monthlyModeSelect.onchange = renderMonthlySub;
+          renderMonthlySub();
+        }
+      }
+      freqSelect.onchange = renderScheduleFields;
+      renderScheduleFields();
 
       var msg = document.createElement('div');
       msg.className = 'msg';
@@ -1322,8 +1414,22 @@
           RegistrationEnd: regEndInput.value,
           EventEndDate: endDateInput.value,
           Description: descInput.value,
-          LeaderboardFrequency: freqSelect.value
+          LeaderboardFrequency: freqSelect.value,
+          LeaderboardTime: timeInput.value || '13:00'
         };
+        if (freqSelect.value === 'Weekly') {
+          event.LeaderboardDayOfWeek = daySelect.value;
+        } else if (freqSelect.value === 'Biweekly') {
+          event.LeaderboardStartDate = startDateInput.value;
+        } else if (freqSelect.value === 'Monthly') {
+          event.LeaderboardMonthlyMode = monthlyModeSelect.value;
+          if (monthlyModeSelect.value === 'weekday') {
+            event.LeaderboardMonthlyOrdinal = monthlyOrdinalSelect.value;
+            event.LeaderboardMonthlyWeekday = monthlyWeekdaySelect.value;
+          } else {
+            event.LeaderboardMonthlyDate = monthlyDateInput.value;
+          }
+        }
         setButtonLoading(saveBtn, true, 'Saving…');
         callApi('/api/admin/events/save', { token: token, event: event })
           .then(function () { refreshNavData(showAdminWeightLossHome); })
@@ -1371,6 +1477,14 @@
       main.appendChild(pendingContainer);
       loadAdminPending(ev.EventID, pendingContainer);
 
+      var allTitle = document.createElement('h2');
+      allTitle.className = 'section-title';
+      allTitle.textContent = 'All Weigh-Ins';
+      main.appendChild(allTitle);
+      var allContainer = document.createElement('div');
+      main.appendChild(allContainer);
+      loadAdminAllWeighIns(ev.EventID, allContainer);
+
       var participantsTitle = document.createElement('h2');
       participantsTitle.className = 'section-title';
       participantsTitle.textContent = 'Participants';
@@ -1400,6 +1514,52 @@
       items.forEach(function (item) {
         container.appendChild(renderPendingCard(item, eventId, container));
       });
+    }
+
+    function loadAdminAllWeighIns(eventId, container) {
+      showLoadingRow(container, 'Loading weigh-ins…');
+      var token = localStorage.getItem(TOKEN_KEY);
+      callApi('/api/admin/weightloss/all', { token: token, eventId: eventId })
+        .then(function (items) { renderAdminAllWeighIns(items, container); })
+        .catch(function (err) { showErrorIn(container, err); });
+    }
+
+    function renderAdminAllWeighIns(items, container) {
+      container.innerHTML = '';
+      if (!items.length) {
+        var empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'No weigh-ins submitted yet.';
+        container.appendChild(empty);
+        return;
+      }
+      var sorted = items.slice().sort(function (a, b) {
+        if (Number(a.week) !== Number(b.week)) return Number(a.week) - Number(b.week);
+        return String(a.name).localeCompare(String(b.name));
+      });
+      var table = document.createElement('table');
+      table.innerHTML = '<tr><th>Name</th><th>Email</th><th>Week</th><th>Weight</th><th>Verified</th><th>Photo</th></tr>';
+      sorted.forEach(function (w) {
+        var tr = document.createElement('tr');
+        var nameTd = document.createElement('td'); nameTd.textContent = w.name;
+        var emailTd = document.createElement('td'); emailTd.textContent = w.email;
+        var weekTd = document.createElement('td'); weekTd.textContent = w.week;
+        var weightTd = document.createElement('td'); weightTd.textContent = w.weight;
+        var verifiedTd = document.createElement('td'); verifiedTd.textContent = w.verified ? 'Yes' : 'Pending';
+        var photoTd = document.createElement('td');
+        if (w.photoUrl) {
+          var link = document.createElement('a');
+          link.href = w.photoUrl;
+          link.target = '_blank';
+          link.textContent = 'View';
+          photoTd.appendChild(link);
+        } else {
+          photoTd.textContent = '—';
+        }
+        [nameTd, emailTd, weekTd, weightTd, verifiedTd, photoTd].forEach(function (td) { tr.appendChild(td); });
+        table.appendChild(tr);
+      });
+      container.appendChild(table);
     }
 
     function renderPendingCard(item, eventId, container) {
