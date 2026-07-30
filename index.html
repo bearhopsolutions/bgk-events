@@ -163,6 +163,7 @@
       padding: 6px 0;
     }
     nav a:hover, nav .navlink:hover { text-decoration: underline; }
+    nav .navlink.navlink-active { font-weight: 800; }
     nav .spacer { flex: 1; }
 
     .iconBtn {
@@ -336,7 +337,7 @@
   <div id="appScreen" class="hidden">
     <nav>
       <span class="brand">BGK Events</span>
-      <a class="navlink" onclick="navigateHome()">Home</a>
+      <a class="navlink" id="navHomeLink" onclick="navigateHome()">Home</a>
       <span id="navModules"></span>
       <span class="spacer"></span>
       <button class="iconBtn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
@@ -549,10 +550,26 @@
       if (showWeightLoss) {
         var a = document.createElement('a');
         a.className = 'navlink';
+        a.id = 'navWeightLossLink';
         a.textContent = 'Weight Loss Challenge';
         a.onclick = function () { navigateWeightLoss(); };
         nav.appendChild(a);
       }
+      updateNavHighlight();
+    }
+
+    function updateNavHighlight() {
+      var homeLink = document.getElementById('navHomeLink');
+      var wlLink = document.getElementById('navWeightLossLink');
+      var view = currentRoute && currentRoute.view;
+      var section = view === 'home' ? 'home' : (String(view).indexOf('weightloss') === 0 ? 'weightloss' : null);
+      if (homeLink) homeLink.classList.toggle('navlink-active', section === 'home');
+      if (wlLink) wlLink.classList.toggle('navlink-active', section === 'weightloss');
+    }
+
+    function setRoute(route) {
+      currentRoute = route;
+      updateNavHighlight();
     }
 
     function loadNavData() {
@@ -578,12 +595,12 @@
     }
 
     function navigateHome() {
-      currentRoute = { view: 'home' };
+      setRoute({ view: 'home' });
       showHome();
     }
 
     function navigateWeightLoss() {
-      currentRoute = { view: 'weightloss' };
+      setRoute({ view: 'weightloss' });
       showWeightLossEntry();
     }
 
@@ -594,14 +611,6 @@
       span.className = 'badge badge-' + status;
       span.textContent = status;
       return span;
-    }
-
-    function homeRelevantEvents(data) {
-      var items = [];
-      (data.upcoming || []).forEach(function (e) { if (e.isEnrolled) items.push(e); });
-      (data.enrolling || []).forEach(function (e) { items.push(e); });
-      (data.active || []).forEach(function (e) { if (e.isEnrolled) items.push(e); });
-      return items;
     }
 
     function showHome() {
@@ -629,47 +638,11 @@
         content.innerHTML = data.contentHtml || '';
         main.appendChild(content);
       }
-
-      var relevant = homeRelevantEvents(data);
-      var title = document.createElement('h2');
-      title.className = 'section-title';
-      title.textContent = 'Your Events';
-      main.appendChild(title);
-
-      if (!relevant.length) {
-        var empty = document.createElement('div');
-        empty.className = 'empty';
-        empty.textContent = 'Nothing enrolling right now, and you\'re not signed up for anything active.';
-        main.appendChild(empty);
-      } else {
-        var grid = document.createElement('div');
-        grid.className = 'grid';
-        relevant.forEach(function (ev) {
-          var card = document.createElement('div');
-          card.className = 'eventCard';
-          var h3 = document.createElement('h3');
-          h3.textContent = ev.name;
-          h3.appendChild(eventStatusBadge(ev.status));
-          card.appendChild(h3);
-          if (ev.description) {
-            var desc = document.createElement('div');
-            desc.className = 'desc';
-            desc.textContent = ev.description;
-            card.appendChild(desc);
-          }
-          var btn = document.createElement('button');
-          btn.textContent = 'View';
-          btn.onclick = function () { routeToEvent(ev); };
-          card.appendChild(btn);
-          grid.appendChild(card);
-        });
-        main.appendChild(grid);
-      }
     }
 
     function routeToEvent(ev) {
       if (ev.moduleType === 'WeightLoss') {
-        currentRoute = { view: 'weightloss-module', eventId: ev.eventId };
+        setRoute({ view: 'weightloss-module', eventId: ev.eventId });
         showWeightLossModule(ev.eventId);
       } else if (ev.moduleType === 'Camping') {
         showCampingModule(ev.eventId);
@@ -1145,7 +1118,7 @@
       if (list.length === 0) {
         showWeightLossEmpty();
       } else if (list.length === 1) {
-        currentRoute = { view: 'weightloss-module', eventId: list[0].eventId };
+        setRoute({ view: 'weightloss-module', eventId: list[0].eventId });
         showWeightLossModule(list[0].eventId);
       } else {
         showWeightLossPickerScreen(list);
@@ -1200,7 +1173,7 @@
         var btn = document.createElement('button');
         btn.textContent = 'View';
         btn.onclick = function () {
-          currentRoute = { view: 'weightloss-module', eventId: ev.eventId };
+          setRoute({ view: 'weightloss-module', eventId: ev.eventId });
           showWeightLossModule(ev.eventId);
         };
         card.appendChild(btn);
