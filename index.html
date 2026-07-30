@@ -532,6 +532,7 @@
       btn.onclick = function () {
         viewMode = viewMode === 'admin' ? 'user' : 'admin';
         renderAdminSwitch();
+        renderModuleNav();
         navigateHome();
       };
       wrap.appendChild(btn);
@@ -555,7 +556,7 @@
         a.onclick = function () { navigateWeightLoss(); };
         nav.appendChild(a);
       }
-      if (currentUser && currentUser.isAdmin) {
+      if (currentUser && currentUser.isAdmin && viewMode === 'admin') {
         var adminLink = document.createElement('a');
         adminLink.className = 'navlink';
         adminLink.id = 'navAdminLink';
