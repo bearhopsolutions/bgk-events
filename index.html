@@ -39,17 +39,20 @@
       }
     }
     * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
     body {
       margin: 0;
       font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       background: var(--bg);
       color: var(--ink);
+      font-size: 17px;
+      line-height: 1.5;
     }
     .hidden { display: none !important; }
 
     .spinner {
-      width: 18px;
-      height: 18px;
+      width: 20px;
+      height: 20px;
       border: 3px solid rgba(128,128,128,0.25);
       border-top-color: var(--teal-dark);
       border-radius: 50%;
@@ -70,10 +73,10 @@
       gap: 12px;
       z-index: 100;
     }
-    #pageLoading .spinner { width: 32px; height: 32px; border-width: 4px; }
-    #pageLoading span { color: var(--text-muted); font-size: 14px; }
+    #pageLoading .spinner { width: 34px; height: 34px; border-width: 4px; }
+    #pageLoading span { color: var(--text-muted); font-size: 16px; }
 
-    .loadingRow { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 14px; padding: 8px 0; }
+    .loadingRow { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 16px; padding: 8px 0; }
 
     /* Login */
     #loginScreen {
@@ -81,55 +84,62 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 20px;
     }
     .card {
       background: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: 10px;
       padding: 32px;
-      width: 320px;
+      width: 100%;
+      max-width: 340px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.06);
     }
-    .card h1 { margin: 0 0 20px; font-size: 22px; text-align: center; }
-    .card label { display: block; font-size: 13px; margin: 12px 0 4px; color: var(--text-muted); }
+    .card h1 { margin: 0 0 20px; font-size: 26px; text-align: center; }
+    .card label { display: block; font-size: 16px; margin: 14px 0 5px; color: var(--text-muted); }
     .card input, .card select, .card textarea {
       width: 100%;
-      padding: 9px 10px;
+      padding: 12px 12px;
       border: 1px solid var(--border);
       border-radius: 6px;
-      font-size: 14px;
+      font-size: 16px;
       background: var(--card-bg);
       color: var(--ink);
       font-family: inherit;
+      min-height: 46px;
     }
+    .card textarea { min-height: 0; }
     .card button {
       width: 100%;
-      margin-top: 18px;
-      padding: 10px;
+      margin-top: 20px;
+      padding: 13px;
       background: var(--teal-dark);
       color: white;
       border: none;
       border-radius: 6px;
-      font-size: 14px;
+      font-size: 17px;
       font-weight: 600;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
+      min-height: 48px;
     }
     .card button:hover { background: #009b80; }
     .card button:disabled { background: #aaa; cursor: default; }
-    .card .btn-small { width: auto; padding: 4px 8px; margin-top: 0; font-size: 12px; }
+    .card .btn-small { width: auto; padding: 6px 10px; margin-top: 0; font-size: 14px; min-height: 0; }
     .card .btn-secondary { background: transparent; color: var(--ink); border: 1px solid var(--border); }
-    .rangeRow { display: flex; gap: 8px; margin-bottom: 6px; align-items: center; }
+    .rangeRow { display: flex; gap: 8px; margin-bottom: 6px; align-items: center; flex-wrap: wrap; }
     .rangeRow input[type=date] { width: auto; }
-    .tagRow { display: flex; align-items: center; gap: 6px; margin: 6px 0; }
-    .tagRow input { width: auto; }
+    .tagRow { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+    .tagRow input { width: auto; min-height: 0; }
     .card button .spinner { border-color: rgba(255,255,255,0.4); border-top-color: white; }
-    .msg { font-size: 13px; margin-top: 10px; text-align: center; }
+    .msg { font-size: 15px; margin-top: 10px; text-align: center; }
     .msg.error { color: var(--err); }
     .msg.ok { color: var(--ok); }
+    .authSwitch { text-align: center; font-size: 15px; margin-top: 18px; color: var(--text-muted); }
+    .authSwitch a { color: var(--teal-dark); cursor: pointer; font-weight: 600; text-decoration: underline; margin-left: 4px; }
 
     /* App shell */
     #appScreen { min-height: 100vh; }
@@ -137,19 +147,20 @@
       background: var(--teal);
       display: flex;
       align-items: center;
-      padding: 0 20px;
-      height: 56px;
+      padding: 10px 20px;
+      min-height: 60px;
       flex-wrap: wrap;
-      gap: 4px;
+      gap: 8px;
     }
-    nav .brand { font-weight: 700; font-size: 18px; margin-right: 24px; color: #0a0a0a; }
+    nav .brand { font-weight: 700; font-size: 20px; margin-right: 24px; color: #0a0a0a; }
     nav a, nav .navlink {
       color: #0a0a0a;
       text-decoration: none;
-      font-size: 14px;
+      font-size: 16px;
       margin-right: 18px;
       cursor: pointer;
       font-weight: 500;
+      padding: 6px 0;
     }
     nav a:hover, nav .navlink:hover { text-decoration: underline; }
     nav .spacer { flex: 1; }
@@ -158,9 +169,9 @@
       background: rgba(0,0,0,0.08);
       border: none;
       border-radius: 999px;
-      width: 32px;
-      height: 32px;
-      font-size: 15px;
+      width: 40px;
+      height: 40px;
+      font-size: 18px;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
@@ -173,98 +184,114 @@
       background: rgba(0,0,0,0.08);
       border: none;
       border-radius: 999px;
-      padding: 6px 14px;
-      font-size: 13px;
+      padding: 9px 16px;
+      font-size: 15px;
       font-weight: 600;
       cursor: pointer;
       color: #0a0a0a;
       margin-right: 12px;
+      min-height: 40px;
     }
     .pillBtn:hover { background: rgba(0,0,0,0.16); }
     .pillBtn.active { background: #0a0a0a; color: var(--teal); }
 
     main { max-width: 900px; margin: 0 auto; padding: 24px 20px; }
-    h2.section-title { font-size: 16px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin: 24px 0 10px; }
+    h2.section-title { font-size: 18px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin: 26px 0 12px; }
 
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
     .eventCard {
       background: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 16px;
+      padding: 18px;
     }
-    .eventCard h3 { margin: 0 0 8px; font-size: 16px; }
-    .eventCard .desc { font-size: 13px; color: var(--text-muted); margin: 8px 0 12px; white-space: pre-wrap; }
+    .eventCard h3 { margin: 0 0 8px; font-size: 18px; }
+    .eventCard .desc { font-size: 15px; color: var(--text-muted); margin: 8px 0 14px; white-space: pre-wrap; }
     .eventCard button {
-      padding: 6px 12px;
+      padding: 9px 16px;
       border-radius: 6px;
       border: none;
       background: var(--teal-dark);
       color: white;
-      font-size: 13px;
+      font-size: 15px;
       cursor: pointer;
+      min-height: 42px;
     }
     .eventCard button:disabled { background: #aaa; cursor: default; }
-    .empty { color: var(--text-muted); font-size: 14px; }
+    .empty { color: var(--text-muted); font-size: 16px; }
 
+    .tableWrap { width: 100%; overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; background: var(--card-bg); }
-    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 14px; }
+    th, td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--border); font-size: 16px; }
 
     .actionBtn {
-      padding: 8px 14px;
+      padding: 10px 16px;
       border-radius: 6px;
       border: none;
       background: var(--teal-dark);
       color: white;
-      font-size: 14px;
+      font-size: 16px;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 8px;
+      min-height: 44px;
     }
     .actionBtn:disabled { background: #aaa; cursor: default; }
     .actionBtn .spinner { border-color: rgba(255,255,255,0.4); border-top-color: white; width: 14px; height: 14px; border-width: 2px; }
     .actionBtn.secondary { background: transparent; color: var(--ink); border: 1px solid var(--border); }
     .actionBtn.danger { background: var(--err); }
 
-    .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; margin-left: 8px; vertical-align: middle; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; margin-left: 8px; vertical-align: middle; }
     .badge-Enrolling { background: rgba(0,178,148,0.15); color: var(--teal-dark); }
     .badge-Active { background: rgba(51,85,204,0.15); color: #5577ee; }
     .badge-Upcoming { background: rgba(122,63,209,0.15); color: #9966ee; }
     .badge-Archived { background: rgba(120,120,120,0.15); color: var(--text-muted); }
 
-    .adminBanner { border: 1px dashed var(--teal-dark); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px; color: var(--text-muted); }
+    .adminBanner { border: 1px dashed var(--teal-dark); border-radius: 8px; padding: 14px 16px; margin-bottom: 20px; font-size: 15px; color: var(--text-muted); }
 
     /* Rich text editor */
-    .rteToolbar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .rteToolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
     .rteToolbar button {
       border: 1px solid var(--border);
       background: var(--card-bg);
       color: var(--ink);
       border-radius: 6px;
-      padding: 5px 10px;
-      font-size: 13px;
+      padding: 8px 12px;
+      font-size: 15px;
       cursor: pointer;
+      min-height: 40px;
     }
     .rteToolbar button:hover { background: var(--bg); }
     .rteBox {
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 12px 14px;
+      padding: 14px 16px;
       min-height: 100px;
       background: var(--card-bg);
-      font-size: 14px;
+      font-size: 16px;
     }
     .rteBox:focus { outline: 2px solid var(--teal-dark); }
-    .rteSource { width: 100%; min-height: 140px; font-family: monospace; font-size: 13px; }
-    .homeContent { font-size: 14px; line-height: 1.5; margin-bottom: 8px; }
+    .rteSource { width: 100%; min-height: 140px; font-family: monospace; font-size: 15px; }
+    .homeContent { font-size: 16px; line-height: 1.5; margin-bottom: 8px; }
     .homeContent:empty::before { content: 'Nothing posted yet.'; color: var(--text-muted); }
 
-    .weighInCard { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; }
-    .weighInCard img { max-width: 240px; border-radius: 6px; display: block; margin: 10px 0; }
-    .weighInCard .fields { font-size: 14px; line-height: 1.6; }
-    .amendRow { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
-    .amendRow input { width: 100px; padding: 7px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--ink); }
+    .weighInCard { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; margin-bottom: 14px; }
+    .weighInCard img { max-width: 260px; max-width: min(260px, 100%); border-radius: 6px; display: block; margin: 10px 0; }
+    .weighInCard .fields { font-size: 16px; line-height: 1.6; }
+    .amendRow { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+    .amendRow input { width: 110px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--ink); font-size: 16px; min-height: 44px; }
+
+    /* Mobile */
+    @media (max-width: 640px) {
+      main { padding: 18px 14px; }
+      .card { padding: 22px; }
+      nav { padding: 10px 14px; }
+      nav .brand { margin-right: 14px; font-size: 18px; }
+      nav a, nav .navlink { margin-right: 14px; }
+      .tableWrap table { display: block; overflow-x: auto; white-space: nowrap; }
+      .weighInCard .fields { font-size: 15px; }
+    }
   </style>
 </head>
 <body>
@@ -284,6 +311,20 @@
         <input type="password" id="loginPin" autocomplete="current-password">
         <button id="loginBtn" onclick="doLogin()"><span class="btnLabel">Log In</span></button>
         <div id="loginMsg" class="msg"></div>
+        <div class="authSwitch">New here?<a onclick="showRegisterForm()">Create an account</a></div>
+      </div>
+      <div id="registerForm" class="hidden">
+        <label>Name</label>
+        <input type="text" id="registerName" autocomplete="name">
+        <label>Email</label>
+        <input type="email" id="registerEmail" autocomplete="username">
+        <label>PIN</label>
+        <input type="password" id="registerPin" autocomplete="new-password">
+        <label>Confirm PIN</label>
+        <input type="password" id="registerPinConfirm" autocomplete="new-password">
+        <button id="registerBtn" onclick="doRegister()"><span class="btnLabel">Register</span></button>
+        <div id="registerMsg" class="msg"></div>
+        <div class="authSwitch">Already have an account?<a onclick="showLoginForm()">Log In</a></div>
       </div>
     </div>
   </div>
@@ -351,6 +392,13 @@
       container.appendChild(errDiv);
     }
 
+    function wrapTable(table) {
+      var wrap = document.createElement('div');
+      wrap.className = 'tableWrap';
+      wrap.appendChild(table);
+      return wrap;
+    }
+
     function hidePageLoading() {
       document.getElementById('pageLoading').classList.add('hidden');
     }
@@ -390,6 +438,50 @@
       msg.textContent = '';
       setButtonLoading(btn, true, 'Logging in…');
       callApi('/api/login', { email: email, pin: pin })
+        .then(function (res) {
+          setButtonLoading(btn, false);
+          if (!res.success) {
+            msg.textContent = res.message;
+            msg.className = 'msg error';
+            return;
+          }
+          localStorage.setItem(TOKEN_KEY, res.token);
+          currentUser = res.user;
+          enterApp();
+        })
+        .catch(function (err) {
+          setButtonLoading(btn, false);
+          msg.textContent = err.message;
+          msg.className = 'msg error';
+        });
+    }
+
+    function showRegisterForm() {
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('registerForm').classList.remove('hidden');
+      document.getElementById('loginMsg').textContent = '';
+    }
+
+    function showLoginForm() {
+      document.getElementById('registerForm').classList.add('hidden');
+      document.getElementById('loginForm').classList.remove('hidden');
+      document.getElementById('registerMsg').textContent = '';
+    }
+
+    function doRegister() {
+      var name = document.getElementById('registerName').value.trim();
+      var email = document.getElementById('registerEmail').value.trim();
+      var pin = document.getElementById('registerPin').value.trim();
+      var pinConfirm = document.getElementById('registerPinConfirm').value.trim();
+      var msg = document.getElementById('registerMsg');
+      var btn = document.getElementById('registerBtn');
+      msg.textContent = '';
+
+      if (!name || !email || !pin) { msg.textContent = 'Fill in all fields.'; msg.className = 'msg error'; return; }
+      if (pin !== pinConfirm) { msg.textContent = 'PINs do not match.'; msg.className = 'msg error'; return; }
+
+      setButtonLoading(btn, true, 'Creating account…');
+      callApi('/api/register', { name: name, email: email, pin: pin })
         .then(function (res) {
           setButtonLoading(btn, false);
           if (!res.success) {
@@ -823,7 +915,7 @@
           tr.innerHTML = '<td>' + t.tripName + '</td><td>' + t.startDate + ' to ' + t.endDate + '</td><td>' + (t.spotAssigned || '—') + '</td><td>' + linkCell + '</td>';
           table.appendChild(tr);
         });
-        main.appendChild(table);
+        main.appendChild(wrapTable(table));
       }
     }
 
@@ -1157,7 +1249,7 @@
           tr.innerHTML = '<td>' + w.week + '</td><td>' + w.weight + '</td><td>' + (w.verified ? 'Yes' : 'Pending') + '</td>';
           myTable.appendChild(tr);
         });
-        main.appendChild(myTable);
+        main.appendChild(wrapTable(myTable));
       }
 
       var lbTitle = document.createElement('h2');
@@ -1171,7 +1263,7 @@
         tr.innerHTML = '<td>' + row.name + '</td><td>' + row.lbsLost + '</td><td>' + row.pctLost + '%</td>';
         lbTable.appendChild(tr);
       });
-      main.appendChild(lbTable);
+      main.appendChild(wrapTable(lbTable));
     }
 
     // ---------- Weight Loss Challenge — admin view ----------
@@ -1559,7 +1651,7 @@
         [nameTd, emailTd, weekTd, weightTd, verifiedTd, photoTd].forEach(function (td) { tr.appendChild(td); });
         table.appendChild(tr);
       });
-      container.appendChild(table);
+      container.appendChild(wrapTable(table));
     }
 
     function renderPendingCard(item, eventId, container) {
@@ -1674,7 +1766,7 @@
         tr.appendChild(paidTd);
         table.appendChild(tr);
       });
-      container.appendChild(table);
+      container.appendChild(wrapTable(table));
     }
 
     // ---------- boot ----------
