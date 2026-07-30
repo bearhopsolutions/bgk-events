@@ -632,12 +632,90 @@
         banner.textContent = 'Admin View — edit the welcome message below. Everyone sees it on Home.';
         main.appendChild(banner);
         main.appendChild(renderContentEditor(data.contentHtml || '', '/api/admin/home/save'));
+
+        var usersTitle = document.createElement('h2');
+        usersTitle.className = 'section-title';
+        usersTitle.textContent = 'User Management';
+        main.appendChild(usersTitle);
+        var usersContainer = document.createElement('div');
+        main.appendChild(usersContainer);
+        loadAdminUsers(usersContainer);
       } else {
         var content = document.createElement('div');
         content.className = 'homeContent';
         content.innerHTML = data.contentHtml || '';
         main.appendChild(content);
       }
+    }
+
+    function loadAdminUsers(container) {
+      showLoadingRow(container, 'Loading users…');
+      var token = localStorage.getItem(TOKEN_KEY);
+      callApi('/api/admin/users/list', { token: token })
+        .then(function (users) { renderAdminUsers(users, container); })
+        .catch(function (err) { showErrorIn(container, err); });
+    }
+
+    function renderAdminUsers(users, container) {
+      container.innerHTML = '';
+      if (!users.length) {
+        var empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'No users yet.';
+        container.appendChild(empty);
+        return;
+      }
+      var table = document.createElement('table');
+      table.innerHTML = '<tr><th>Name</th><th>Email</th><th>New PIN</th><th></th></tr>';
+      users.forEach(function (u) {
+        var tr = document.createElement('tr');
+
+        var nameTd = document.createElement('td');
+        nameTd.textContent = u.name + (u.isAdmin ? ' · Admin' : '');
+
+        var emailTd = document.createElement('td');
+        emailTd.textContent = u.email;
+
+        var pinTd = document.createElement('td');
+        var pinInput = document.createElement('input');
+        pinInput.type = 'text';
+        pinInput.placeholder = 'New PIN';
+        pinInput.style.width = '110px';
+        pinTd.appendChild(pinInput);
+
+        var actionTd = document.createElement('td');
+        var resetBtn = document.createElement('button');
+        resetBtn.className = 'actionBtn secondary';
+        resetBtn.innerHTML = '<span class="btnLabel">Reset PIN</span>';
+        var rowMsg = document.createElement('div');
+        rowMsg.className = 'msg';
+        resetBtn.onclick = function () {
+          var token = localStorage.getItem(TOKEN_KEY);
+          rowMsg.textContent = '';
+          setButtonLoading(resetBtn, true, 'Saving…');
+          callApi('/api/admin/users/reset-pin', { token: token, email: u.email, newPin: pinInput.value })
+            .then(function () {
+              setButtonLoading(resetBtn, false);
+              pinInput.value = '';
+              rowMsg.textContent = 'PIN updated.';
+              rowMsg.className = 'msg ok';
+            })
+            .catch(function (err) {
+              setButtonLoading(resetBtn, false);
+              rowMsg.textContent = err.message;
+              rowMsg.className = 'msg error';
+            });
+        };
+        actionTd.appendChild(resetBtn);
+        actionTd.appendChild(rowMsg);
+
+        tr.appendChild(nameTd);
+        tr.appendChild(emailTd);
+        tr.appendChild(pinTd);
+        tr.appendChild(actionTd);
+        table.appendChild(tr);
+      });
+      container.appendChild(wrapTable(table));
     }
 
     function routeToEvent(ev) {
