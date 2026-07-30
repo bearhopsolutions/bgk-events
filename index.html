@@ -555,16 +555,51 @@
         a.onclick = function () { navigateWeightLoss(); };
         nav.appendChild(a);
       }
+      if (currentUser && currentUser.isAdmin) {
+        var adminLink = document.createElement('a');
+        adminLink.className = 'navlink';
+        adminLink.id = 'navAdminLink';
+        adminLink.textContent = 'Admin';
+        adminLink.onclick = function () { navigateAdmin(); };
+        nav.appendChild(adminLink);
+      }
       updateNavHighlight();
     }
 
     function updateNavHighlight() {
       var homeLink = document.getElementById('navHomeLink');
       var wlLink = document.getElementById('navWeightLossLink');
+      var adminLink = document.getElementById('navAdminLink');
       var view = currentRoute && currentRoute.view;
-      var section = view === 'home' ? 'home' : (String(view).indexOf('weightloss') === 0 ? 'weightloss' : null);
+      var section = view === 'home' ? 'home'
+        : view === 'admin' ? 'admin'
+        : (String(view).indexOf('weightloss') === 0 ? 'weightloss' : null);
       if (homeLink) homeLink.classList.toggle('navlink-active', section === 'home');
       if (wlLink) wlLink.classList.toggle('navlink-active', section === 'weightloss');
+      if (adminLink) adminLink.classList.toggle('navlink-active', section === 'admin');
+    }
+
+    function navigateAdmin() {
+      setRoute({ view: 'admin' });
+      showAdminScreen();
+    }
+
+    function showAdminScreen() {
+      var main = document.getElementById('mainContent');
+      main.innerHTML = '';
+
+      var h = document.createElement('h2');
+      h.className = 'section-title';
+      h.textContent = 'Admin';
+      main.appendChild(h);
+
+      var usersTitle = document.createElement('h2');
+      usersTitle.className = 'section-title';
+      usersTitle.textContent = 'User Management';
+      main.appendChild(usersTitle);
+      var usersContainer = document.createElement('div');
+      main.appendChild(usersContainer);
+      loadAdminUsers(usersContainer);
     }
 
     function setRoute(route) {
@@ -632,14 +667,6 @@
         banner.textContent = 'Admin View — edit the welcome message below. Everyone sees it on Home.';
         main.appendChild(banner);
         main.appendChild(renderContentEditor(data.contentHtml || '', '/api/admin/home/save'));
-
-        var usersTitle = document.createElement('h2');
-        usersTitle.className = 'section-title';
-        usersTitle.textContent = 'User Management';
-        main.appendChild(usersTitle);
-        var usersContainer = document.createElement('div');
-        main.appendChild(usersContainer);
-        loadAdminUsers(usersContainer);
       } else {
         var content = document.createElement('div');
         content.className = 'homeContent';
