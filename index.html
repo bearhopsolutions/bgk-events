@@ -247,6 +247,7 @@
     .badge-Enrolling { background: rgba(0,178,148,0.15); color: var(--teal-dark); }
     .badge-Active { background: rgba(51,85,204,0.15); color: #5577ee; }
     .badge-Upcoming { background: rgba(122,63,209,0.15); color: #9966ee; }
+    .badge-Ended { background: rgba(230,126,34,0.15); color: #e67e22; }
     .badge-Archived { background: rgba(120,120,120,0.15); color: var(--text-muted); }
 
     .adminBanner { border: 1px dashed var(--teal-dark); border-radius: 8px; padding: 14px 16px; margin-bottom: 20px; font-size: 15px; color: var(--text-muted); }
@@ -539,7 +540,7 @@
     }
 
     function qualifyingWeightLossEvents(data) {
-      var all = (data.enrolling || []).concat(data.active || []);
+      var all = (data.enrolling || []).concat(data.active || []).concat(data.ended || []);
       return all.filter(function (e) { return e.moduleType === 'WeightLoss' && (e.status === 'Enrolling' || e.isEnrolled); });
     }
 
@@ -1352,60 +1353,66 @@
         waiting.className = 'empty';
         waiting.textContent = "You're enrolled — waiting for an admin to confirm your payment before you can submit weigh-ins.";
         main.appendChild(waiting);
-      } else if (data.status !== 'Active') {
-        var notActive = document.createElement('div');
-        notActive.className = 'empty';
-        notActive.textContent = "You're all set — weigh-ins open once the challenge becomes active.";
-        main.appendChild(notActive);
       } else {
-        var subTitle = document.createElement('h2');
-        subTitle.className = 'section-title';
-        subTitle.textContent = 'Week ' + data.currentWeek + ' Weigh-In';
-        main.appendChild(subTitle);
+        if (data.status === 'Active') {
+          var subTitle = document.createElement('h2');
+          subTitle.className = 'section-title';
+          subTitle.textContent = 'Week ' + data.currentWeek + ' Weigh-In';
+          main.appendChild(subTitle);
 
-        var form = document.createElement('div');
-        form.className = 'card';
-        form.style.width = 'auto';
-        form.style.maxWidth = '320px';
-        var wLabel = document.createElement('label');
-        wLabel.textContent = 'Weight (lbs)';
-        var wInput = document.createElement('input');
-        wInput.type = 'number';
-        wInput.step = '0.1';
-        var pLabel = document.createElement('label');
-        pLabel.textContent = 'Scale photo';
-        var pInput = document.createElement('input');
-        pInput.type = 'file';
-        pInput.accept = 'image/*';
-        var subBtn = document.createElement('button');
-        subBtn.innerHTML = '<span class="btnLabel">Submit Weigh-In</span>';
-        var subMsg = document.createElement('div');
-        subMsg.className = 'msg';
-        subBtn.onclick = function () {
-          if (!wInput.value) { subMsg.textContent = 'Enter a weight.'; subMsg.className = 'msg error'; return; }
-          var token = localStorage.getItem(TOKEN_KEY);
-          var proceed = function (base64, mime) {
-            setButtonLoading(subBtn, true, 'Uploading…');
-            callApi('/api/weightloss/weighin', { token: token, eventId: eventId, week: data.currentWeek, weight: wInput.value, photoBase64: base64 || '', photoMimeType: mime || '' })
-              .then(function () { showWeightLossModule(eventId); })
-              .catch(function (err) {
-                setButtonLoading(subBtn, false);
-                subMsg.textContent = err.message;
-                subMsg.className = 'msg error';
-              });
+          var form = document.createElement('div');
+          form.className = 'card';
+          form.style.width = 'auto';
+          form.style.maxWidth = '320px';
+          var wLabel = document.createElement('label');
+          wLabel.textContent = 'Weight (lbs)';
+          var wInput = document.createElement('input');
+          wInput.type = 'number';
+          wInput.step = '0.1';
+          var pLabel = document.createElement('label');
+          pLabel.textContent = 'Scale photo';
+          var pInput = document.createElement('input');
+          pInput.type = 'file';
+          pInput.accept = 'image/*';
+          var subBtn = document.createElement('button');
+          subBtn.innerHTML = '<span class="btnLabel">Submit Weigh-In</span>';
+          var subMsg = document.createElement('div');
+          subMsg.className = 'msg';
+          subBtn.onclick = function () {
+            if (!wInput.value) { subMsg.textContent = 'Enter a weight.'; subMsg.className = 'msg error'; return; }
+            var token = localStorage.getItem(TOKEN_KEY);
+            var proceed = function (base64, mime) {
+              setButtonLoading(subBtn, true, 'Uploading…');
+              callApi('/api/weightloss/weighin', { token: token, eventId: eventId, week: data.currentWeek, weight: wInput.value, photoBase64: base64 || '', photoMimeType: mime || '' })
+                .then(function () { showWeightLossModule(eventId); })
+                .catch(function (err) {
+                  setButtonLoading(subBtn, false);
+                  subMsg.textContent = err.message;
+                  subMsg.className = 'msg error';
+                });
+            };
+            if (pInput.files && pInput.files[0]) {
+              var file = pInput.files[0];
+              var reader = new FileReader();
+              reader.onload = function () { proceed(reader.result.split(',')[1], file.type); };
+              reader.onerror = function () { subMsg.textContent = 'Could not read photo.'; subMsg.className = 'msg error'; };
+              reader.readAsDataURL(file);
+            } else {
+              proceed('', '');
+            }
           };
-          if (pInput.files && pInput.files[0]) {
-            var file = pInput.files[0];
-            var reader = new FileReader();
-            reader.onload = function () { proceed(reader.result.split(',')[1], file.type); };
-            reader.onerror = function () { subMsg.textContent = 'Could not read photo.'; subMsg.className = 'msg error'; };
-            reader.readAsDataURL(file);
+          [wLabel, wInput, pLabel, pInput, subBtn, subMsg].forEach(function (el) { form.appendChild(el); });
+          main.appendChild(form);
+        } else {
+          var notActive = document.createElement('div');
+          notActive.className = 'empty';
+          if (data.status === 'Ended' || data.status === 'Archived') {
+            notActive.textContent = "This challenge has ended — thanks for participating! Weigh-ins are closed, but your history and the final leaderboard are still here.";
           } else {
-            proceed('', '');
+            notActive.textContent = "You're all set — weigh-ins open once the challenge becomes active.";
           }
-        };
-        [wLabel, wInput, pLabel, pInput, subBtn, subMsg].forEach(function (el) { form.appendChild(el); });
-        main.appendChild(form);
+          main.appendChild(notActive);
+        }
 
         var myTitle = document.createElement('h2');
         myTitle.className = 'section-title';
@@ -1497,7 +1504,7 @@
         editBtn.onclick = function () { showAdminEventForm(ev); };
         card.appendChild(editBtn);
 
-        if (ev.computedStatus === 'Enrolling' || ev.computedStatus === 'Active') {
+        if (ev.computedStatus === 'Enrolling' || ev.computedStatus === 'Active' || ev.computedStatus === 'Ended') {
           var manageBtn = document.createElement('button');
           manageBtn.textContent = 'Manage';
           manageBtn.onclick = function () { showAdminManageEvent(ev); };
