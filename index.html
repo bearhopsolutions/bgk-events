@@ -698,9 +698,43 @@
       table.innerHTML = '<tr><th>Name</th><th>Email</th><th>New PIN</th><th></th></tr>';
       users.forEach(function (u) {
         var tr = document.createElement('tr');
+        var rowMsg = document.createElement('div');
+        rowMsg.className = 'msg';
 
         var nameTd = document.createElement('td');
-        nameTd.textContent = u.name + (u.isAdmin ? ' · Admin' : '');
+        var nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.value = u.name;
+        nameInput.style.width = '140px';
+        var renameBtn = document.createElement('button');
+        renameBtn.className = 'actionBtn secondary btn-small';
+        renameBtn.style.marginLeft = '6px';
+        renameBtn.innerHTML = '<span class="btnLabel">Save</span>';
+        renameBtn.onclick = function () {
+          var token = localStorage.getItem(TOKEN_KEY);
+          rowMsg.textContent = '';
+          setButtonLoading(renameBtn, true, 'Saving…');
+          callApi('/api/admin/users/rename', { token: token, email: u.email, newName: nameInput.value })
+            .then(function () {
+              setButtonLoading(renameBtn, false);
+              u.name = nameInput.value;
+              rowMsg.textContent = 'Name updated.';
+              rowMsg.className = 'msg ok';
+            })
+            .catch(function (err) {
+              setButtonLoading(renameBtn, false);
+              rowMsg.textContent = err.message;
+              rowMsg.className = 'msg error';
+            });
+        };
+        nameTd.appendChild(nameInput);
+        nameTd.appendChild(renameBtn);
+        if (u.isAdmin) {
+          var adminTag = document.createElement('div');
+          adminTag.className = 'desc';
+          adminTag.textContent = 'Admin';
+          nameTd.appendChild(adminTag);
+        }
 
         var emailTd = document.createElement('td');
         emailTd.textContent = u.email;
@@ -716,8 +750,6 @@
         var resetBtn = document.createElement('button');
         resetBtn.className = 'actionBtn secondary';
         resetBtn.innerHTML = '<span class="btnLabel">Reset PIN</span>';
-        var rowMsg = document.createElement('div');
-        rowMsg.className = 'msg';
         resetBtn.onclick = function () {
           var token = localStorage.getItem(TOKEN_KEY);
           rowMsg.textContent = '';
@@ -1483,7 +1515,7 @@
         return;
       }
 
-      events.forEach(function (ev) {
+      events.slice().reverse().forEach(function (ev) {
         var card = document.createElement('div');
         card.className = 'eventCard';
         card.style.marginBottom = '12px';
