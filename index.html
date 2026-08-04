@@ -553,7 +553,7 @@
         var a = document.createElement('a');
         a.className = 'navlink';
         a.id = 'navWeightLossLink';
-        a.textContent = 'Weight Loss Challenge';
+        a.textContent = 'Biggest Loser';
         a.onclick = function () { navigateWeightLoss(); };
         nav.appendChild(a);
       }
@@ -815,7 +815,7 @@
       if (viewMode === 'admin') {
         var banner = document.createElement('div');
         banner.className = 'adminBanner';
-        banner.textContent = 'Admin View — edit the message below. Everyone sees it above Weight Loss Challenge.';
+        banner.textContent = 'Admin View — edit the message below. Everyone sees it above Biggest Loser.';
         main.appendChild(banner);
         main.appendChild(renderContentEditor(contentHtml || '', '/api/admin/weightloss/content/save'));
       } else if (contentHtml && contentHtml.trim()) {
@@ -1214,7 +1214,7 @@
       return wrap;
     }
 
-    // ---------- Weight Loss Challenge — entry (nav) ----------
+    // ---------- Biggest Loser — entry (nav) ----------
 
     function showWeightLossEntry() {
       if (viewMode === 'admin') {
@@ -1241,7 +1241,7 @@
           renderWeightLossBanner(main, contentHtml);
           var h = document.createElement('h2');
           h.className = 'section-title';
-          h.textContent = 'Weight Loss Challenge';
+          h.textContent = 'Biggest Loser';
           main.appendChild(h);
           var empty = document.createElement('div');
           empty.className = 'empty';
@@ -1265,7 +1265,7 @@
       renderWeightLossBanner(main, contentHtml);
       var h = document.createElement('h2');
       h.className = 'section-title';
-      h.textContent = 'Weight Loss Challenge';
+      h.textContent = 'Biggest Loser';
       main.appendChild(h);
 
       var grid = document.createElement('div');
@@ -1289,7 +1289,7 @@
       main.appendChild(grid);
     }
 
-    // ---------- Weight Loss Challenge — participant view ----------
+    // ---------- Biggest Loser — participant view ----------
 
     function showWeightLossModule(eventId) {
       var main = document.getElementById('mainContent');
@@ -1320,11 +1320,10 @@
           joinWrap.style.width = 'auto';
           joinWrap.style.maxWidth = '320px';
           joinWrap.style.marginBottom = '20px';
-          var jLabel = document.createElement('label');
-          jLabel.textContent = 'Starting weight (lbs)';
-          var weightInput = document.createElement('input');
-          weightInput.type = 'number';
-          weightInput.step = '0.1';
+          var jNote = document.createElement('div');
+          jNote.className = 'empty';
+          jNote.style.marginBottom = '14px';
+          jNote.textContent = "You'll enter your starting weight with your first weigh-in once the challenge becomes active.";
           var joinBtn = document.createElement('button');
           joinBtn.innerHTML = '<span class="btnLabel">Join Challenge</span>';
           var joinMsg = document.createElement('div');
@@ -1332,7 +1331,7 @@
           joinBtn.onclick = function () {
             var token = localStorage.getItem(TOKEN_KEY);
             setButtonLoading(joinBtn, true, 'Joining…');
-            callApi('/api/weightloss/join', { token: token, eventId: eventId, initialWeight: weightInput.value })
+            callApi('/api/weightloss/join', { token: token, eventId: eventId })
               .then(function () { refreshNavData(function () { showWeightLossModule(eventId); }); })
               .catch(function (err) {
                 setButtonLoading(joinBtn, false);
@@ -1340,7 +1339,7 @@
                 joinMsg.className = 'msg error';
               });
           };
-          [jLabel, weightInput, joinBtn, joinMsg].forEach(function (el) { joinWrap.appendChild(el); });
+          [jNote, joinBtn, joinMsg].forEach(function (el) { joinWrap.appendChild(el); });
           main.appendChild(joinWrap);
         } else {
           var closed = document.createElement('div');
@@ -1442,7 +1441,7 @@
       main.appendChild(wrapTable(lbTable));
     }
 
-    // ---------- Weight Loss Challenge — admin view ----------
+    // ---------- Biggest Loser — admin view ----------
 
     function showAdminWeightLossHome() {
       var main = document.getElementById('mainContent');
@@ -1466,7 +1465,7 @@
 
       var h = document.createElement('h2');
       h.className = 'section-title';
-      h.textContent = 'Weight Loss Challenge — Admin';
+      h.textContent = 'Biggest Loser — Admin';
       main.appendChild(h);
 
       var createBtn = document.createElement('button');
@@ -1507,8 +1506,38 @@
         if (ev.computedStatus === 'Enrolling' || ev.computedStatus === 'Active' || ev.computedStatus === 'Ended') {
           var manageBtn = document.createElement('button');
           manageBtn.textContent = 'Manage';
+          manageBtn.style.marginRight = '8px';
           manageBtn.onclick = function () { showAdminManageEvent(ev); };
           card.appendChild(manageBtn);
+        }
+
+        if (ev.computedStatus === 'Active' || ev.computedStatus === 'Ended') {
+          var screenshotMsg = document.createElement('div');
+          screenshotMsg.className = 'msg';
+          var screenshotBtn = document.createElement('button');
+          screenshotBtn.textContent = 'Send Screenshot Now';
+          screenshotBtn.onclick = function () {
+            var token = localStorage.getItem(TOKEN_KEY);
+            screenshotBtn.disabled = true;
+            var originalText = screenshotBtn.textContent;
+            screenshotBtn.textContent = 'Sending…';
+            screenshotMsg.textContent = '';
+            callApi('/api/admin/weightloss/post-screenshot', { token: token, eventId: ev.EventID })
+              .then(function () {
+                screenshotBtn.disabled = false;
+                screenshotBtn.textContent = originalText;
+                screenshotMsg.textContent = 'Posted to Discord.';
+                screenshotMsg.className = 'msg ok';
+              })
+              .catch(function (err) {
+                screenshotBtn.disabled = false;
+                screenshotBtn.textContent = originalText;
+                screenshotMsg.textContent = err.message;
+                screenshotMsg.className = 'msg error';
+              });
+          };
+          card.appendChild(screenshotBtn);
+          card.appendChild(screenshotMsg);
         }
         main.appendChild(card);
       });
