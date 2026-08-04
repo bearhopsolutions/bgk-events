@@ -685,6 +685,74 @@
         .catch(function (err) { showErrorIn(container, err); });
     }
 
+    function renderEditableCell(initialValue, saveFn, viewSuffix) {
+      var td = document.createElement('td');
+      var current = initialValue;
+
+      function renderView() {
+        td.innerHTML = '';
+        var span = document.createElement('span');
+        span.textContent = current;
+        td.appendChild(span);
+        if (viewSuffix) {
+          var suffixEl = document.createElement('span');
+          suffixEl.className = 'desc';
+          suffixEl.style.marginLeft = '6px';
+          suffixEl.textContent = viewSuffix;
+          td.appendChild(suffixEl);
+        }
+        var editBtn = document.createElement('button');
+        editBtn.className = 'btn-small';
+        editBtn.style.marginLeft = '8px';
+        editBtn.textContent = 'Edit';
+        editBtn.onclick = renderEdit;
+        td.appendChild(editBtn);
+      }
+
+      function renderEdit() {
+        td.innerHTML = '';
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.value = current;
+        input.style.width = '160px';
+        var saveBtn = document.createElement('button');
+        saveBtn.className = 'actionBtn secondary btn-small';
+        saveBtn.style.marginLeft = '6px';
+        saveBtn.innerHTML = '<span class="btnLabel">Save</span>';
+        var cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn-small';
+        cancelBtn.style.marginLeft = '4px';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.onclick = renderView;
+        var msg = document.createElement('div');
+        msg.className = 'msg';
+
+        saveBtn.onclick = function () {
+          msg.textContent = '';
+          setButtonLoading(saveBtn, true, 'Saving…');
+          saveFn(input.value)
+            .then(function () {
+              current = input.value;
+              renderView();
+            })
+            .catch(function (err) {
+              setButtonLoading(saveBtn, false);
+              msg.textContent = err.message;
+              msg.className = 'msg error';
+            });
+        };
+
+        td.appendChild(input);
+        td.appendChild(saveBtn);
+        td.appendChild(cancelBtn);
+        td.appendChild(msg);
+        input.focus();
+      }
+
+      renderView();
+      return td;
+    }
+
     function renderAdminUsers(users, container) {
       container.innerHTML = '';
       if (!users.length) {
@@ -701,43 +769,17 @@
         var rowMsg = document.createElement('div');
         rowMsg.className = 'msg';
 
-        var nameTd = document.createElement('td');
-        var nameInput = document.createElement('input');
-        nameInput.type = 'text';
-        nameInput.value = u.name;
-        nameInput.style.width = '140px';
-        var renameBtn = document.createElement('button');
-        renameBtn.className = 'actionBtn secondary btn-small';
-        renameBtn.style.marginLeft = '6px';
-        renameBtn.innerHTML = '<span class="btnLabel">Save</span>';
-        renameBtn.onclick = function () {
+        var nameTd = renderEditableCell(u.name, function (newValue) {
           var token = localStorage.getItem(TOKEN_KEY);
-          rowMsg.textContent = '';
-          setButtonLoading(renameBtn, true, 'Saving…');
-          callApi('/api/admin/users/rename', { token: token, email: u.email, newName: nameInput.value })
-            .then(function () {
-              setButtonLoading(renameBtn, false);
-              u.name = nameInput.value;
-              rowMsg.textContent = 'Name updated.';
-              rowMsg.className = 'msg ok';
-            })
-            .catch(function (err) {
-              setButtonLoading(renameBtn, false);
-              rowMsg.textContent = err.message;
-              rowMsg.className = 'msg error';
-            });
-        };
-        nameTd.appendChild(nameInput);
-        nameTd.appendChild(renameBtn);
-        if (u.isAdmin) {
-          var adminTag = document.createElement('div');
-          adminTag.className = 'desc';
-          adminTag.textContent = 'Admin';
-          nameTd.appendChild(adminTag);
-        }
+          return callApi('/api/admin/users/rename', { token: token, email: u.email, newName: newValue })
+            .then(function () { u.name = newValue; });
+        }, u.isAdmin ? 'Admin' : null);
 
-        var emailTd = document.createElement('td');
-        emailTd.textContent = u.email;
+        var emailTd = renderEditableCell(u.email, function (newValue) {
+          var token = localStorage.getItem(TOKEN_KEY);
+          return callApi('/api/admin/users/change-email', { token: token, email: u.email, newEmail: newValue })
+            .then(function () { u.email = newValue; });
+        });
 
         var pinTd = document.createElement('td');
         var pinInput = document.createElement('input');
