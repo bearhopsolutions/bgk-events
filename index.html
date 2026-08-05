@@ -1351,6 +1351,12 @@
         h3.textContent = ev.name;
         h3.appendChild(eventStatusBadge(ev.status));
         card.appendChild(h3);
+        if (ev.description) {
+          var pickerDesc = document.createElement('div');
+          pickerDesc.className = 'desc';
+          pickerDesc.textContent = ev.description;
+          card.appendChild(pickerDesc);
+        }
         var btn = document.createElement('button');
         btn.textContent = 'View';
         btn.onclick = function () {
@@ -1386,6 +1392,14 @@
       h.className = 'section-title';
       h.textContent = data.name + ' — ' + data.status;
       main.appendChild(h);
+
+      if (data.description) {
+        var moduleDesc = document.createElement('div');
+        moduleDesc.className = 'desc';
+        moduleDesc.style.marginBottom = '14px';
+        moduleDesc.textContent = data.description;
+        main.appendChild(moduleDesc);
+      }
 
       if (!data.isParticipant) {
         if (data.status === 'Enrolling') {
@@ -1565,6 +1579,13 @@
         h3.textContent = ev.EventName;
         h3.appendChild(eventStatusBadge(ev.computedStatus));
         card.appendChild(h3);
+
+        if (ev.Description) {
+          var adminEventDesc = document.createElement('div');
+          adminEventDesc.className = 'desc';
+          adminEventDesc.textContent = ev.Description;
+          card.appendChild(adminEventDesc);
+        }
 
         var meta = document.createElement('div');
         meta.className = 'desc';
