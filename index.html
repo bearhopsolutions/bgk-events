@@ -272,6 +272,19 @@
     }
     .rteToolbar button:hover { background: var(--bg); }
     .rteToolbar button:disabled { background: #aaa; cursor: default; }
+    .rteToolbar select {
+      width: auto;
+      min-height: 40px;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      color: var(--ink);
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-top: 0;
+      font-size: 14px;
+      font-family: inherit;
+      cursor: pointer;
+    }
     .rteBox {
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -991,6 +1004,51 @@
         if (url) cmd('createLink', url);
       };
       toolbar.appendChild(linkBtn);
+
+      var TEXT_COLORS = [
+        ['Red', '#e74c3c'], ['Orange', '#e67e22'], ['Yellow', '#f1c40f'],
+        ['Green', '#27ae60'], ['Blue', '#2980b9'], ['Purple', '#8e44ad']
+      ];
+      var HIGHLIGHT_COLORS = [
+        ['Yellow', '#fff176'], ['Green', '#a5d6a7'], ['Pink', '#f48fb1'],
+        ['Blue', '#90caf9'], ['Orange', '#ffcc80']
+      ];
+
+      function buildColorSelect(placeholderLabel, autoLabel, options, command) {
+        var select = document.createElement('select');
+        select.title = placeholderLabel;
+
+        var placeholder = document.createElement('option');
+        placeholder.textContent = placeholderLabel;
+        placeholder.value = '';
+        placeholder.disabled = true;
+        placeholder.selected = true;
+        select.appendChild(placeholder);
+
+        var autoOpt = document.createElement('option');
+        // "inherit"/"transparent" apply no fixed color, so the text keeps following the
+        // theme-aware ink/background colors instead of looking wrong after a theme switch.
+        autoOpt.value = command === 'foreColor' ? 'inherit' : 'transparent';
+        autoOpt.textContent = autoLabel;
+        select.appendChild(autoOpt);
+
+        options.forEach(function (pair) {
+          var opt = document.createElement('option');
+          opt.value = pair[1];
+          opt.textContent = pair[0];
+          select.appendChild(opt);
+        });
+
+        select.onchange = function () {
+          rteBox.focus();
+          document.execCommand(command, false, select.value);
+          select.selectedIndex = 0;
+        };
+        return select;
+      }
+
+      toolbar.appendChild(buildColorSelect('Text Color', 'Auto', TEXT_COLORS, 'foreColor'));
+      toolbar.appendChild(buildColorSelect('Highlight', 'None (Auto)', HIGHLIGHT_COLORS, 'hiliteColor'));
 
       var photoInput = document.createElement('input');
       photoInput.type = 'file';
