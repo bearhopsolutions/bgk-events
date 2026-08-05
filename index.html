@@ -282,6 +282,10 @@
     .videoEmbed { max-width: 560px; margin: 12px 0; }
     .videoEmbed iframe { width: 100%; aspect-ratio: 16 / 9; border: 0; display: block; border-radius: 8px; }
 
+    .eventDescHtml { font-size: 15px; color: var(--text-muted); margin: 8px 0 14px; }
+    .eventDescHtml img { max-width: 100%; height: auto; border-radius: 6px; display: block; margin: 8px 0; }
+    .eventDescHtml .videoEmbed { max-width: 100%; }
+
     .weighInCard { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; margin-bottom: 14px; }
     .weighInCard img { max-width: 260px; max-width: min(260px, 100%); border-radius: 6px; display: block; margin: 10px 0; }
     .weighInCard .fields { font-size: 16px; line-height: 1.6; }
@@ -905,9 +909,8 @@
       return m ? m[1] : null;
     }
 
-    function renderContentEditor(initialHtml, saveEndpoint) {
+    function buildRichTextEditor(initialHtml) {
       var wrap = document.createElement('div');
-      wrap.style.marginBottom = '20px';
 
       var toolbar = document.createElement('div');
       toolbar.className = 'rteToolbar';
@@ -920,9 +923,6 @@
       var sourceBox = document.createElement('textarea');
       sourceBox.className = 'card rteSource hidden';
       sourceBox.value = initialHtml;
-
-      var msg = document.createElement('div');
-      msg.className = 'msg';
 
       function cmd(command, value) {
         rteBox.focus();
@@ -1054,12 +1054,28 @@
       wrap.appendChild(rteBox);
       wrap.appendChild(sourceBox);
 
+      return {
+        wrap: wrap,
+        getValue: function () { return inSourceMode ? sourceBox.value : rteBox.innerHTML; }
+      };
+    }
+
+    function renderContentEditor(initialHtml, saveEndpoint) {
+      var outer = document.createElement('div');
+      outer.style.marginBottom = '20px';
+
+      var editor = buildRichTextEditor(initialHtml);
+      outer.appendChild(editor.wrap);
+
+      var msg = document.createElement('div');
+      msg.className = 'msg';
+
       var saveBtn = document.createElement('button');
       saveBtn.className = 'actionBtn';
       saveBtn.style.marginTop = '10px';
       saveBtn.innerHTML = '<span class="btnLabel">Save</span>';
       saveBtn.onclick = function () {
-        var html = inSourceMode ? sourceBox.value : rteBox.innerHTML;
+        var html = editor.getValue();
         var token = localStorage.getItem(TOKEN_KEY);
         setButtonLoading(saveBtn, true, 'Saving…');
         callApi(saveEndpoint, { token: token, html: html })
@@ -1074,9 +1090,9 @@
             msg.className = 'msg error';
           });
       };
-      wrap.appendChild(saveBtn);
-      wrap.appendChild(msg);
-      return wrap;
+      outer.appendChild(saveBtn);
+      outer.appendChild(msg);
+      return outer;
     }
 
     // ---------- Camping module ----------
@@ -1351,12 +1367,6 @@
         h3.textContent = ev.name;
         h3.appendChild(eventStatusBadge(ev.status));
         card.appendChild(h3);
-        if (ev.description) {
-          var pickerDesc = document.createElement('div');
-          pickerDesc.className = 'desc';
-          pickerDesc.textContent = ev.description;
-          card.appendChild(pickerDesc);
-        }
         var btn = document.createElement('button');
         btn.textContent = 'View';
         btn.onclick = function () {
@@ -1395,9 +1405,8 @@
 
       if (data.description) {
         var moduleDesc = document.createElement('div');
-        moduleDesc.className = 'desc';
-        moduleDesc.style.marginBottom = '14px';
-        moduleDesc.textContent = data.description;
+        moduleDesc.className = 'eventDescHtml';
+        moduleDesc.innerHTML = data.description;
         main.appendChild(moduleDesc);
       }
 
@@ -1582,8 +1591,8 @@
 
         if (ev.Description) {
           var adminEventDesc = document.createElement('div');
-          adminEventDesc.className = 'desc';
-          adminEventDesc.textContent = ev.Description;
+          adminEventDesc.className = 'eventDescHtml';
+          adminEventDesc.innerHTML = ev.Description;
           card.appendChild(adminEventDesc);
         }
 
@@ -1664,10 +1673,11 @@
       nameInput.value = existing ? existing.EventName : '';
       field('Event name', nameInput);
 
-      var descInput = document.createElement('textarea');
-      descInput.rows = 3;
-      descInput.value = existing ? (existing.Description || '') : '';
-      field('Description', descInput);
+      var descLabel = document.createElement('label');
+      descLabel.textContent = 'Description';
+      form.appendChild(descLabel);
+      var descEditor = buildRichTextEditor(existing ? (existing.Description || '') : '');
+      form.appendChild(descEditor.wrap);
 
       var visSelect = document.createElement('select');
       ['All', 'Enrolled', 'Hidden'].forEach(function (v) {
@@ -1805,7 +1815,7 @@
           RegistrationStart: regStartInput.value,
           RegistrationEnd: regEndInput.value,
           EventEndDate: endDateInput.value,
-          Description: descInput.value,
+          Description: descEditor.getValue(),
           LeaderboardFrequency: freqSelect.value,
           LeaderboardTime: timeInput.value || '13:00'
         };
