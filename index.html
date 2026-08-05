@@ -1037,7 +1037,16 @@
         autoBtn.onmousedown = function () { autoSavedRange = saveSelection(); };
         autoBtn.onclick = function () {
           restoreSelection(autoSavedRange);
-          document.execCommand(command, false, autoValue);
+          var value = autoValue;
+          if (value.indexOf('var(') === 0) {
+            // execCommand only accepts concrete colors (hex/rgb/named) - a literal var()
+            // reference is silently rejected, so resolve it to the theme's current actual
+            // color right now instead of passing the CSS variable through unresolved.
+            var varName = value.slice(4, -1).trim();
+            var resolved = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+            if (resolved) value = resolved;
+          }
+          document.execCommand(command, false, value);
         };
         toolbar.appendChild(autoBtn);
       }
