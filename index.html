@@ -252,29 +252,48 @@
 
     .adminBanner { border: 1px dashed var(--teal-dark); border-radius: 8px; padding: 14px 16px; margin-bottom: 20px; font-size: 15px; color: var(--text-muted); }
 
-    /* Rich text editor */
-    .rteToolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+    /* Rich text editor - fully self-contained so it looks the same whether it's placed
+       directly in main or nested inside a .card form; explicitly overrides .card button's
+       width/margin/display so toolbar buttons never get pushed into a full-width stack. */
+    .rteToolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; margin-top: 0; }
     .rteToolbar button {
+      width: auto;
+      display: inline-block;
       border: 1px solid var(--border);
       background: var(--card-bg);
       color: var(--ink);
       border-radius: 6px;
       padding: 8px 12px;
+      margin-top: 0;
       font-size: 15px;
+      font-weight: 400;
       cursor: pointer;
       min-height: 40px;
     }
     .rteToolbar button:hover { background: var(--bg); }
+    .rteToolbar button:disabled { background: #aaa; cursor: default; }
     .rteBox {
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 14px 16px;
       min-height: 100px;
       background: var(--card-bg);
+      color: var(--ink);
       font-size: 16px;
     }
     .rteBox:focus { outline: 2px solid var(--teal-dark); }
-    .rteSource { width: 100%; min-height: 140px; font-family: monospace; font-size: 15px; }
+    .rteSource {
+      width: 100%;
+      min-height: 140px;
+      font-family: monospace;
+      font-size: 15px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card-bg);
+      color: var(--ink);
+      margin-top: 0;
+    }
     .homeContent { font-size: 16px; line-height: 1.5; margin-bottom: 8px; }
     .homeContent:empty::before { content: 'Nothing posted yet.'; color: var(--text-muted); }
 
@@ -921,7 +940,7 @@
       rteBox.innerHTML = initialHtml;
 
       var sourceBox = document.createElement('textarea');
-      sourceBox.className = 'card rteSource hidden';
+      sourceBox.className = 'rteSource hidden';
       sourceBox.value = initialHtml;
 
       function cmd(command, value) {
