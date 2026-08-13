@@ -1492,13 +1492,36 @@
       return { year: year, month: month, day: day, weekday: new Date(Date.UTC(year, month - 1, day)).getUTCDay() };
     }
 
-    function nextChicagoOccurrence(weekday, hour, minute) {
+    function partsFromDateString(dateStr) {
+      var bits = dateStr.split('-').map(Number);
+      return { year: bits[0], month: bits[1], day: bits[2], weekday: new Date(Date.UTC(bits[0], bits[1] - 1, bits[2])).getUTCDay() };
+    }
+
+    function addDaysToParts(parts, days) {
+      var dt = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + days));
+      return { year: dt.getUTCFullYear(), month: dt.getUTCMonth() + 1, day: dt.getUTCDate(), weekday: dt.getUTCDay() };
+    }
+
+    function partsKey(parts) {
+      return parts.year + '-' + String(parts.month).padStart(2, '0') + '-' + String(parts.day).padStart(2, '0');
+    }
+
+    // notBeforeDateStr: if the event is still Enrolling, don't compute an occurrence that falls
+    // before the event actually goes Active (the day after RegistrationEnd) - there'd be nothing
+    // to weigh in for yet. Pass the event's RegistrationEnd; omit/blank for no floor.
+    function nextChicagoOccurrence(weekday, hour, minute, notBeforeDateStr) {
       var today = chicagoTodayParts();
-      var deltaDays = (weekday - today.weekday + 7) % 7;
-      var candidate = new Date(Date.UTC(today.year, today.month - 1, today.day + deltaDays));
-      var result = chicagoWallTimeToUTC(candidate.getUTCFullYear(), candidate.getUTCMonth() + 1, candidate.getUTCDate(), hour, minute);
-      if (deltaDays === 0 && result.getTime() < Date.now()) {
-        result = chicagoWallTimeToUTC(candidate.getUTCFullYear(), candidate.getUTCMonth() + 1, candidate.getUTCDate() + 7, hour, minute);
+      var floor = today;
+      if (notBeforeDateStr) {
+        var activeFrom = addDaysToParts(partsFromDateString(notBeforeDateStr), 1);
+        if (partsKey(activeFrom) > partsKey(floor)) floor = activeFrom;
+      }
+      var deltaDays = (weekday - floor.weekday + 7) % 7;
+      var candidate = addDaysToParts(floor, deltaDays);
+      var result = chicagoWallTimeToUTC(candidate.year, candidate.month, candidate.day, hour, minute);
+      var floorIsToday = partsKey(floor) === partsKey(today);
+      if (deltaDays === 0 && floorIsToday && result.getTime() < Date.now()) {
+        result = chicagoWallTimeToUTC(candidate.year, candidate.month, candidate.day + 7, hour, minute);
       }
       return result;
     }
@@ -1509,7 +1532,7 @@
 
     function buildReminderTimes(reminder) {
       var timeParts = String(reminder.time).split(':').map(Number);
-      var start = nextChicagoOccurrence(reminder.day, timeParts[0], timeParts[1] || 0);
+      var start = nextChicagoOccurrence(reminder.day, timeParts[0], timeParts[1] || 0, reminder.activeFromDate);
       var end = new Date(start.getTime() + 15 * 60000);
       var until = reminder.untilDate
         ? chicagoWallTimeToUTC.apply(null, reminder.untilDate.split('-').map(Number).concat([23, 59]))
@@ -1610,7 +1633,7 @@
         main.appendChild(moduleDesc);
       }
 
-      if (data.calendarReminder && data.isParticipant && data.status === 'Active') {
+      if (data.calendarReminder && data.isParticipant && (data.status === 'Active' || data.status === 'Enrolling')) {
         main.appendChild(renderCalendarReminderButton(data.calendarReminder));
       }
 
