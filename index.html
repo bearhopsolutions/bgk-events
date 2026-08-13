@@ -1463,6 +1463,122 @@
       main.appendChild(grid);
     }
 
+    // ---------- Calendar reminder ----------
+
+    var ICS_WEEKDAY_CODES = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+
+    // The weigh-in window is defined in America/Chicago server-side; the reminder must reflect
+    // that real wall-clock time regardless of the visitor's own timezone. Standard trick: format
+    // a UTC guess through the target timezone, measure how far off it reads, and correct for it.
+    // DST-safe since Intl's tz data reflects whichever offset (CST/CDT) actually applies.
+    function chicagoWallTimeToUTC(year, month, day, hour, minute) {
+      var guess = new Date(Date.UTC(year, month - 1, day, hour, minute));
+      var fmt = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Chicago', hour12: false,
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+      });
+      var parts = {};
+      fmt.formatToParts(guess).forEach(function (p) { parts[p.type] = p.value; });
+      var asChicago = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour) % 24, Number(parts.minute));
+      var diff = guess.getTime() - asChicago;
+      return new Date(guess.getTime() + diff);
+    }
+
+    function chicagoTodayParts() {
+      var fmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' });
+      var parts = {};
+      fmt.formatToParts(new Date()).forEach(function (p) { parts[p.type] = p.value; });
+      var year = Number(parts.year), month = Number(parts.month), day = Number(parts.day);
+      return { year: year, month: month, day: day, weekday: new Date(Date.UTC(year, month - 1, day)).getUTCDay() };
+    }
+
+    function nextChicagoOccurrence(weekday, hour, minute) {
+      var today = chicagoTodayParts();
+      var deltaDays = (weekday - today.weekday + 7) % 7;
+      var candidate = new Date(Date.UTC(today.year, today.month - 1, today.day + deltaDays));
+      var result = chicagoWallTimeToUTC(candidate.getUTCFullYear(), candidate.getUTCMonth() + 1, candidate.getUTCDate(), hour, minute);
+      if (deltaDays === 0 && result.getTime() < Date.now()) {
+        result = chicagoWallTimeToUTC(candidate.getUTCFullYear(), candidate.getUTCMonth() + 1, candidate.getUTCDate() + 7, hour, minute);
+      }
+      return result;
+    }
+
+    function formatIcsUtc(date) {
+      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    }
+
+    function buildReminderTimes(reminder) {
+      var timeParts = String(reminder.time).split(':').map(Number);
+      var start = nextChicagoOccurrence(reminder.day, timeParts[0], timeParts[1] || 0);
+      var end = new Date(start.getTime() + 15 * 60000);
+      var until = reminder.untilDate
+        ? chicagoWallTimeToUTC.apply(null, reminder.untilDate.split('-').map(Number).concat([23, 59]))
+        : null;
+      return { start: start, end: end, until: until };
+    }
+
+    function buildWeighInIcs(reminder) {
+      var times = buildReminderTimes(reminder);
+      var rrule = 'FREQ=WEEKLY;BYDAY=' + ICS_WEEKDAY_CODES[reminder.day] + (times.until ? ';UNTIL=' + formatIcsUtc(times.until) : '');
+      var lines = [
+        'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//BGK Events//Weigh-In Reminder//EN',
+        'BEGIN:VEVENT',
+        'UID:weighin-reminder-' + reminder.eventName.replace(/[^a-zA-Z0-9]/g, '') + '@bgkevents',
+        'DTSTAMP:' + formatIcsUtc(new Date()),
+        'DTSTART:' + formatIcsUtc(times.start),
+        'DTEND:' + formatIcsUtc(times.end),
+        'RRULE:' + rrule,
+        'SUMMARY:Weigh-In Window Open — ' + reminder.eventName,
+        'DESCRIPTION:Your weigh-in window is now open for ' + reminder.eventName + '.',
+        'END:VEVENT', 'END:VCALENDAR'
+      ];
+      return lines.join('\r\n');
+    }
+
+    function buildGoogleCalendarUrl(reminder) {
+      var times = buildReminderTimes(reminder);
+      var rrule = 'RRULE:FREQ=WEEKLY;BYDAY=' + ICS_WEEKDAY_CODES[reminder.day] + (times.until ? ';UNTIL=' + formatIcsUtc(times.until) : '');
+      var params = [
+        'action=TEMPLATE',
+        'text=' + encodeURIComponent('Weigh-In Window Open — ' + reminder.eventName),
+        'dates=' + formatIcsUtc(times.start) + '/' + formatIcsUtc(times.end),
+        'details=' + encodeURIComponent('Your weigh-in window is now open for ' + reminder.eventName + '.'),
+        'recur=' + encodeURIComponent(rrule)
+      ];
+      return 'https://calendar.google.com/calendar/render?' + params.join('&');
+    }
+
+    function detectCalendarPlatform() {
+      var ua = navigator.userAgent || '';
+      if (/Android/.test(ua)) return 'android';
+      return 'ics'; // iOS and everything else (desktop, unknown) - .ics is the universal fallback
+    }
+
+    function renderCalendarReminderButton(reminder) {
+      var wrap = document.createElement('div');
+      wrap.style.marginBottom = '16px';
+      var btn = document.createElement('button');
+      btn.className = 'actionBtn secondary';
+      btn.innerHTML = '<span class="btnLabel">Add Weigh-In Reminder to Calendar</span>';
+      btn.onclick = function () {
+        if (detectCalendarPlatform() === 'android') {
+          window.open(buildGoogleCalendarUrl(reminder), '_blank');
+          return;
+        }
+        var blob = new Blob([buildWeighInIcs(reminder)], { type: 'text/calendar' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'weigh-in-reminder.ics';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      };
+      wrap.appendChild(btn);
+      return wrap;
+    }
+
     // ---------- Biggest Loser — participant view ----------
 
     function showWeightLossModule(eventId) {
@@ -1492,6 +1608,10 @@
         moduleDesc.className = 'eventDescHtml';
         moduleDesc.innerHTML = data.description;
         main.appendChild(moduleDesc);
+      }
+
+      if (data.calendarReminder && data.isParticipant && data.status === 'Active') {
+        main.appendChild(renderCalendarReminderButton(data.calendarReminder));
       }
 
       if (!data.isParticipant) {
