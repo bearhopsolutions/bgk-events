@@ -1534,11 +1534,26 @@
         waiting.textContent = "You're enrolled — waiting for an admin to confirm your payment before you can submit weigh-ins.";
         main.appendChild(waiting);
       } else {
-        if (data.status === 'Active') {
+        if (data.status === 'Active' && !data.canWeighInNow) {
+          var windowClosed = document.createElement('div');
+          windowClosed.className = 'empty';
+          windowClosed.textContent = data.weighInWindow
+            ? 'Weigh-ins aren\'t open right now. Window: ' + data.weighInWindow + '.'
+            : "Weigh-ins aren't open right now.";
+          main.appendChild(windowClosed);
+        } else if (data.status === 'Active') {
           var subTitle = document.createElement('h2');
           subTitle.className = 'section-title';
           subTitle.textContent = 'Week ' + data.currentWeek + ' Weigh-In';
           main.appendChild(subTitle);
+
+          if (data.weighInWindow) {
+            var windowNote = document.createElement('div');
+            windowNote.className = 'desc';
+            windowNote.style.marginBottom = '10px';
+            windowNote.textContent = 'Weigh-in window: ' + data.weighInWindow + '.';
+            main.appendChild(windowNote);
+          }
 
           var form = document.createElement('div');
           form.className = 'card';
@@ -1883,6 +1898,63 @@
       freqSelect.onchange = renderScheduleFields;
       renderScheduleFields();
 
+      var windowToggleLabel = document.createElement('label');
+      windowToggleLabel.className = 'tagRow';
+      windowToggleLabel.style.marginTop = '16px';
+      var windowToggle = document.createElement('input');
+      windowToggle.type = 'checkbox';
+      var windowConfiguredInitially = !!(existing && existing.WeighInStartTime && existing.WeighInEndTime);
+      windowToggle.checked = windowConfiguredInitially;
+      windowToggleLabel.appendChild(windowToggle);
+      windowToggleLabel.appendChild(document.createTextNode('Restrict weigh-ins to a specific window each week'));
+      form.appendChild(windowToggleLabel);
+
+      var windowFields = document.createElement('div');
+      form.appendChild(windowFields);
+
+      var winStartDaySelect, winStartTimeInput, winEndDaySelect, winEndTimeInput;
+
+      function renderWindowFields() {
+        windowFields.innerHTML = '';
+        if (!windowToggle.checked) return;
+
+        var startRow = document.createElement('div');
+        startRow.className = 'rangeRow';
+        winStartDaySelect = document.createElement('select');
+        WEEKDAY_NAMES.forEach(function (name, idx) {
+          var opt = document.createElement('option');
+          opt.value = idx; opt.textContent = name;
+          if (existing && Number(existing.WeighInStartDay) === idx) opt.selected = true;
+          else if (!existing && idx === 5) opt.selected = true;
+          winStartDaySelect.appendChild(opt);
+        });
+        winStartTimeInput = document.createElement('input');
+        winStartTimeInput.type = 'time';
+        winStartTimeInput.value = (existing && existing.WeighInStartTime) || '06:00';
+        startRow.appendChild(winStartDaySelect);
+        startRow.appendChild(winStartTimeInput);
+        field('Weigh-in window starts', startRow, windowFields);
+
+        var endRow = document.createElement('div');
+        endRow.className = 'rangeRow';
+        winEndDaySelect = document.createElement('select');
+        WEEKDAY_NAMES.forEach(function (name, idx) {
+          var opt = document.createElement('option');
+          opt.value = idx; opt.textContent = name;
+          if (existing && Number(existing.WeighInEndDay) === idx) opt.selected = true;
+          else if (!existing && idx === 0) opt.selected = true;
+          winEndDaySelect.appendChild(opt);
+        });
+        winEndTimeInput = document.createElement('input');
+        winEndTimeInput.type = 'time';
+        winEndTimeInput.value = (existing && existing.WeighInEndTime) || '23:59';
+        endRow.appendChild(winEndDaySelect);
+        endRow.appendChild(winEndTimeInput);
+        field('Weigh-in window ends', endRow, windowFields);
+      }
+      windowToggle.onchange = renderWindowFields;
+      renderWindowFields();
+
       var msg = document.createElement('div');
       msg.className = 'msg';
 
@@ -1915,6 +1987,17 @@
           } else {
             event.LeaderboardMonthlyDate = monthlyDateInput.value;
           }
+        }
+        if (windowToggle.checked) {
+          event.WeighInStartDay = winStartDaySelect.value;
+          event.WeighInStartTime = winStartTimeInput.value || '06:00';
+          event.WeighInEndDay = winEndDaySelect.value;
+          event.WeighInEndTime = winEndTimeInput.value || '23:59';
+        } else {
+          event.WeighInStartDay = '';
+          event.WeighInStartTime = '';
+          event.WeighInEndDay = '';
+          event.WeighInEndTime = '';
         }
         setButtonLoading(saveBtn, true, 'Saving…');
         callApi('/api/admin/events/save', { token: token, event: event })
