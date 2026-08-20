@@ -1940,6 +1940,17 @@
       regEndInput.value = existing ? (existing.RegistrationEnd || '') : '';
       field('Registration end', regEndInput);
 
+      var eventStartInput = document.createElement('input');
+      eventStartInput.type = 'date';
+      eventStartInput.disabled = true;
+      field('Event start date', eventStartInput);
+
+      function refreshEventStartDisplay() {
+        eventStartInput.value = regEndInput.value ? partsKey(addDaysToParts(partsFromDateString(regEndInput.value), 1)) : '';
+      }
+      regEndInput.addEventListener('input', refreshEventStartDisplay);
+      refreshEventStartDisplay();
+
       var endDateInput = document.createElement('input');
       endDateInput.type = 'date';
       endDateInput.value = existing ? (existing.EventEndDate || '') : '';
