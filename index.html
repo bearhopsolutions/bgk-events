@@ -2432,8 +2432,13 @@
         if (existing) payload.EventID = existing.eventId;
         callApi('/api/admin/campingv2/events/save', { token: token, event: payload })
           .then(function (res) {
-            return callApi('/api/admin/campingv2/events/list', { token: token }).then(function (list) {
-              showAdminCampingEventForm(list.find(function (e) { return e.eventId === res.eventId; }));
+            // refreshNavData re-fetches campingV2Events too — without this, the "Camping" nav
+            // link in My View keeps using the stale list from page-load and a newly created
+            // event stays invisible there until a full page refresh.
+            return refreshNavData().then(function () {
+              return callApi('/api/admin/campingv2/events/list', { token: token }).then(function (list) {
+                showAdminCampingEventForm(list.find(function (e) { return e.eventId === res.eventId; }));
+              });
             });
           })
           .catch(function (err) { setButtonLoading(saveBtn, false); msg.textContent = err.message; msg.className = 'msg error'; });
