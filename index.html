@@ -458,7 +458,12 @@
     var currentUser = null;
     var currentData = null; // { upcoming, enrolling, active } from /api/events (nav visibility)
     var campingV2Events = []; // from /api/campingv2/events — separate from currentData, Camping (v2) isn't an Events-sheet module
-    var viewMode = 'user'; // 'user' | 'admin' — only meaningful when currentUser.isAdmin
+    var MODULE_ADMIN_OPTIONS = [
+      { key: 'weightloss', label: 'Biggest Loser' },
+      { key: 'campingv2', label: 'Camping' },
+      { key: 'admin', label: 'Admin tab' }
+    ];
+    var viewMode = 'user'; // 'user' | 'admin' — only meaningful when currentUser has sudo or any module-admin access
     var currentRoute = { view: 'home' };
 
     function callApi(path, body) {
@@ -627,10 +632,18 @@
 
     // ---------- Nav ----------
 
+    function hasAnyAdminAccess(user) {
+      return !!user && (user.isSudoAdmin || (user.moduleAdmins && user.moduleAdmins.length > 0));
+    }
+
+    function isModuleAdminFor(user, moduleKey) {
+      return !!user && (user.isSudoAdmin || (user.moduleAdmins && user.moduleAdmins.indexOf(moduleKey) !== -1));
+    }
+
     function renderAdminSwitch() {
       var wrap = document.getElementById('adminSwitchWrap');
       wrap.innerHTML = '';
-      if (!currentUser || !currentUser.isAdmin) return;
+      if (!hasAnyAdminAccess(currentUser)) return;
       var btn = document.createElement('button');
       btn.className = 'pillBtn' + (viewMode === 'admin' ? ' active' : '');
       btn.textContent = viewMode === 'admin' ? 'Admin View' : 'My View';
@@ -652,7 +665,7 @@
       var nav = document.getElementById('navModules');
       nav.innerHTML = '';
       if (!currentData) return;
-      var showWeightLoss = viewMode === 'admin' || qualifyingWeightLossEvents(currentData).length > 0;
+      var showWeightLoss = (viewMode === 'admin' && isModuleAdminFor(currentUser, 'weightloss')) || qualifyingWeightLossEvents(currentData).length > 0;
       if (showWeightLoss) {
         var a = document.createElement('a');
         a.className = 'navlink';
@@ -661,7 +674,7 @@
         a.onclick = function () { navigateWeightLoss(); };
         nav.appendChild(a);
       }
-      var showCampingV2 = viewMode === 'admin' || campingV2Events.length > 0;
+      var showCampingV2 = (viewMode === 'admin' && isModuleAdminFor(currentUser, 'campingv2')) || campingV2Events.length > 0;
       if (showCampingV2) {
         var campA = document.createElement('a');
         campA.className = 'navlink';
@@ -670,7 +683,7 @@
         campA.onclick = function () { navigateCampingV2(); };
         nav.appendChild(campA);
       }
-      if (currentUser && currentUser.isAdmin && viewMode === 'admin') {
+      if (viewMode === 'admin' && isModuleAdminFor(currentUser, 'admin')) {
         var adminLink = document.createElement('a');
         adminLink.className = 'navlink';
         adminLink.id = 'navAdminLink';
@@ -792,7 +805,7 @@
       var main = document.getElementById('mainContent');
       main.innerHTML = '';
 
-      if (viewMode === 'admin') {
+      if (viewMode === 'admin' && currentUser && currentUser.isSudoAdmin) {
         var banner = document.createElement('div');
         banner.className = 'adminBanner';
         banner.textContent = 'Admin View — edit the welcome message below. Everyone sees it on Home.';
@@ -882,6 +895,58 @@
       return td;
     }
 
+    function renderModuleAdminRolesCell(u) {
+      var td = document.createElement('td');
+      if (u.isSudoAdmin) {
+        var note = document.createElement('span');
+        note.className = 'desc';
+        note.textContent = 'Sudo — has all modules';
+        td.appendChild(note);
+        return td;
+      }
+      var checkboxes = {};
+      MODULE_ADMIN_OPTIONS.forEach(function (m) {
+        var lbl = document.createElement('label');
+        lbl.style.display = 'block';
+        lbl.style.fontSize = '0.85em';
+        lbl.style.fontWeight = 'normal';
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = (u.moduleAdmins || []).indexOf(m.key) !== -1;
+        checkboxes[m.key] = cb;
+        lbl.appendChild(cb);
+        lbl.appendChild(document.createTextNode(' ' + m.label));
+        td.appendChild(lbl);
+      });
+      var saveBtn = document.createElement('button');
+      saveBtn.className = 'actionBtn secondary btn-small';
+      saveBtn.style.marginTop = '4px';
+      saveBtn.innerHTML = '<span class="btnLabel">Save Roles</span>';
+      var rolesMsg = document.createElement('div');
+      rolesMsg.className = 'msg';
+      saveBtn.onclick = function () {
+        var token = localStorage.getItem(TOKEN_KEY);
+        var selected = MODULE_ADMIN_OPTIONS.filter(function (m) { return checkboxes[m.key].checked; }).map(function (m) { return m.key; });
+        rolesMsg.textContent = '';
+        setButtonLoading(saveBtn, true, 'Saving…');
+        callApi('/api/admin/roles/set', { token: token, email: u.email, moduleAdmins: selected })
+          .then(function () {
+            setButtonLoading(saveBtn, false);
+            u.moduleAdmins = selected;
+            rolesMsg.textContent = 'Saved.';
+            rolesMsg.className = 'msg ok';
+          })
+          .catch(function (err) {
+            setButtonLoading(saveBtn, false);
+            rolesMsg.textContent = err.message;
+            rolesMsg.className = 'msg error';
+          });
+      };
+      td.appendChild(saveBtn);
+      td.appendChild(rolesMsg);
+      return td;
+    }
+
     function renderAdminUsers(users, container) {
       container.innerHTML = '';
       if (!users.length) {
@@ -891,18 +956,27 @@
         container.appendChild(empty);
         return;
       }
+      var canManageRoles = currentUser && currentUser.isSudoAdmin;
       var table = document.createElement('table');
-      table.innerHTML = '<tr><th>Name</th><th>Email</th><th>New PIN</th><th></th></tr>';
+      table.innerHTML = '<tr><th>Name</th><th>Email</th><th>New PIN</th>' +
+        (canManageRoles ? '<th>Module Admin</th>' : '') + '<th></th></tr>';
       users.forEach(function (u) {
         var tr = document.createElement('tr');
         var rowMsg = document.createElement('div');
         rowMsg.className = 'msg';
 
+        var roleBadge = u.isSudoAdmin ? 'Sudo Admin' : (u.moduleAdmins && u.moduleAdmins.length
+          ? u.moduleAdmins.map(function (key) {
+              var opt = MODULE_ADMIN_OPTIONS.filter(function (o) { return o.key === key; })[0];
+              return opt ? opt.label : key;
+            }).join(', ') + ' admin'
+          : null);
+
         var nameTd = renderEditableCell(u.name, function (newValue) {
           var token = localStorage.getItem(TOKEN_KEY);
           return callApi('/api/admin/users/rename', { token: token, email: u.email, newName: newValue })
             .then(function () { u.name = newValue; });
-        }, u.isAdmin ? 'Admin' : null);
+        }, roleBadge);
 
         var emailTd = renderEditableCell(u.email, function (newValue) {
           var token = localStorage.getItem(TOKEN_KEY);
@@ -944,6 +1018,7 @@
         tr.appendChild(nameTd);
         tr.appendChild(emailTd);
         tr.appendChild(pinTd);
+        if (canManageRoles) tr.appendChild(renderModuleAdminRolesCell(u));
         tr.appendChild(actionTd);
         table.appendChild(tr);
       });
@@ -3523,6 +3598,106 @@
       var participantsContainer = document.createElement('div');
       main.appendChild(participantsContainer);
       loadAdminParticipants(ev.EventID, participantsContainer);
+
+      var insertTitle = document.createElement('h2');
+      insertTitle.className = 'section-title';
+      insertTitle.textContent = 'Insert or Correct a Weigh-In';
+      main.appendChild(insertTitle);
+      var insertContainer = document.createElement('div');
+      main.appendChild(insertContainer);
+      loadAdminInsertWeighInForm(ev.EventID, insertContainer, allContainer);
+    }
+
+    function loadAdminInsertWeighInForm(eventId, container, allContainer) {
+      showLoadingRow(container, 'Loading participants…');
+      var token = localStorage.getItem(TOKEN_KEY);
+      callApi('/api/admin/weightloss/participants', { token: token, eventId: eventId })
+        .then(function (participants) { renderAdminInsertWeighInForm(participants, eventId, container, allContainer); })
+        .catch(function (err) { showErrorIn(container, err); });
+    }
+
+    function renderAdminInsertWeighInForm(participants, eventId, container, allContainer) {
+      container.innerHTML = '';
+      if (!participants.length) {
+        var empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'No participants to insert a weigh-in for yet.';
+        container.appendChild(empty);
+        return;
+      }
+
+      var desc = document.createElement('div');
+      desc.className = 'desc';
+      desc.style.marginBottom = '8px';
+      desc.textContent = 'For a week the participant never submitted themselves (e.g. they told you their weight some other way). This creates the weigh-in directly, already verified.';
+      container.appendChild(desc);
+
+      var row = document.createElement('div');
+      row.style.display = 'flex';
+      row.style.gap = '8px';
+      row.style.flexWrap = 'wrap';
+      row.style.alignItems = 'center';
+
+      var select = document.createElement('select');
+      participants.forEach(function (p) {
+        var opt = document.createElement('option');
+        opt.value = p.email;
+        opt.textContent = p.name + ' (' + p.email + ')';
+        select.appendChild(opt);
+      });
+
+      var weekInput = document.createElement('input');
+      weekInput.type = 'number';
+      weekInput.min = '1';
+      weekInput.placeholder = 'Week #';
+      weekInput.style.width = '90px';
+
+      var weightInput = document.createElement('input');
+      weightInput.type = 'number';
+      weightInput.step = '0.1';
+      weightInput.placeholder = 'Weight';
+      weightInput.style.width = '100px';
+
+      var insertBtn = document.createElement('button');
+      insertBtn.className = 'actionBtn';
+      insertBtn.innerHTML = '<span class="btnLabel">Insert Weight</span>';
+
+      var msg = document.createElement('div');
+      msg.className = 'msg';
+
+      insertBtn.onclick = function () {
+        var token = localStorage.getItem(TOKEN_KEY);
+        msg.textContent = '';
+        if (!weekInput.value || !weightInput.value) {
+          msg.textContent = 'Enter a week and weight.';
+          msg.className = 'msg error';
+          return;
+        }
+        setButtonLoading(insertBtn, true, 'Saving…');
+        callApi('/api/admin/weightloss/insert-weighin', {
+          token: token, eventId: eventId, email: select.value, week: weekInput.value, weight: weightInput.value
+        })
+          .then(function () {
+            setButtonLoading(insertBtn, false);
+            weekInput.value = '';
+            weightInput.value = '';
+            msg.textContent = 'Weigh-in saved.';
+            msg.className = 'msg ok';
+            loadAdminAllWeighIns(eventId, allContainer);
+          })
+          .catch(function (err) {
+            setButtonLoading(insertBtn, false);
+            msg.textContent = err.message;
+            msg.className = 'msg error';
+          });
+      };
+
+      row.appendChild(select);
+      row.appendChild(weekInput);
+      row.appendChild(weightInput);
+      row.appendChild(insertBtn);
+      container.appendChild(row);
+      container.appendChild(msg);
     }
 
     function loadAdminPending(eventId, container) {
