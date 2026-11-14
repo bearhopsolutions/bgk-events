@@ -1967,6 +1967,18 @@
         btn.textContent = 'Edit';
         btn.onclick = function () { showAdminCampsiteForm(c); };
         card.appendChild(btn);
+        var delBtn = document.createElement('button');
+        delBtn.textContent = 'Delete';
+        delBtn.style.background = 'var(--err)';
+        delBtn.style.marginLeft = '8px';
+        delBtn.onclick = function () {
+          if (!confirm('Delete campsite "' + c.name + '"? This cannot be undone.')) return;
+          var token = localStorage.getItem(TOKEN_KEY);
+          callApi('/api/admin/campingv2/campsites/delete', { token: token, campsiteId: c.campsiteId })
+            .then(function () { loadAdminCampsites(container); })
+            .catch(function (err) { alert(err.message); });
+        };
+        card.appendChild(delBtn);
         grid.appendChild(card);
       });
       container.appendChild(grid);
@@ -2006,6 +2018,19 @@
         btn.textContent = 'Edit';
         btn.onclick = function () { showAdminCampingEventForm(ev); };
         card.appendChild(btn);
+        var delBtn = document.createElement('button');
+        delBtn.textContent = 'Delete';
+        delBtn.style.background = 'var(--err)';
+        delBtn.style.marginLeft = '8px';
+        delBtn.onclick = function () {
+          if (!confirm('Delete event "' + ev.name + '" and all its parties? This cannot be undone.')) return;
+          var token = localStorage.getItem(TOKEN_KEY);
+          callApi('/api/admin/campingv2/events/delete', { token: token, eventId: ev.eventId })
+            .then(function () { return refreshNavData(); })
+            .then(function () { loadAdminCampingEvents(container); })
+            .catch(function (err) { alert(err.message); });
+        };
+        card.appendChild(delBtn);
         grid.appendChild(card);
       });
       container.appendChild(grid);
@@ -2116,6 +2141,23 @@
       var mapContainer = document.createElement('div');
       main.appendChild(mapContainer);
       renderAdminCampsiteMapSection(mapContainer, existing);
+
+      if (existing) {
+        var deleteCampsiteBtn = document.createElement('button');
+        deleteCampsiteBtn.className = 'actionBtn danger';
+        deleteCampsiteBtn.innerHTML = '<span class="btnLabel">Delete Campsite</span>';
+        deleteCampsiteBtn.style.marginTop = '20px';
+        deleteCampsiteBtn.style.marginRight = '10px';
+        deleteCampsiteBtn.onclick = function () {
+          if (!confirm('Delete campsite "' + existing.name + '"? This cannot be undone.')) return;
+          setButtonLoading(deleteCampsiteBtn, true, 'Deleting…');
+          var token = localStorage.getItem(TOKEN_KEY);
+          callApi('/api/admin/campingv2/campsites/delete', { token: token, campsiteId: existing.campsiteId })
+            .then(function () { showAdminCampingV2Home(); })
+            .catch(function (err) { setButtonLoading(deleteCampsiteBtn, false); alert(err.message); });
+        };
+        main.appendChild(deleteCampsiteBtn);
+      }
 
       var backBtn = document.createElement('button');
       backBtn.className = 'actionBtn secondary';
@@ -2455,6 +2497,21 @@
         var partiesContainer = document.createElement('div');
         main.appendChild(partiesContainer);
         loadAdminCampingParties(existing.eventId, partiesContainer);
+
+        var deleteEventBtn = document.createElement('button');
+        deleteEventBtn.className = 'actionBtn danger';
+        deleteEventBtn.innerHTML = '<span class="btnLabel">Delete Event</span>';
+        deleteEventBtn.style.marginTop = '20px';
+        deleteEventBtn.style.marginRight = '10px';
+        deleteEventBtn.onclick = function () {
+          if (!confirm('Delete event "' + existing.name + '" and all its parties? This cannot be undone.')) return;
+          setButtonLoading(deleteEventBtn, true, 'Deleting…');
+          callApi('/api/admin/campingv2/events/delete', { token: token, eventId: existing.eventId })
+            .then(function () { return refreshNavData(); })
+            .then(function () { showAdminCampingV2Home(); })
+            .catch(function (err) { setButtonLoading(deleteEventBtn, false); alert(err.message); });
+        };
+        main.appendChild(deleteEventBtn);
       }
 
       var backBtn = document.createElement('button');
