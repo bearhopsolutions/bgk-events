@@ -1771,11 +1771,6 @@
       h3.textContent = 'Your Party: ' + data.myParty.partyName;
       wrap.appendChild(h3);
 
-      var siteLine = document.createElement('div');
-      siteLine.className = 'desc';
-      siteLine.textContent = 'Site: ' + (data.myParty.site || 'Not yet assigned');
-      wrap.appendChild(siteLine);
-
       if (data.needsRedeclare) {
         var note = document.createElement('div');
         note.className = 'msg error';
@@ -1788,6 +1783,33 @@
         wrap.appendChild(reopenBtn);
         return wrap;
       }
+
+      var siteLabel = document.createElement('label');
+      siteLabel.textContent = 'Site';
+      wrap.appendChild(siteLabel);
+      var siteRow = document.createElement('div');
+      siteRow.className = 'tagRow';
+      var siteInput = document.createElement('input');
+      siteInput.type = 'text';
+      siteInput.placeholder = 'Not yet assigned';
+      siteInput.value = data.myParty.site || '';
+      siteInput.style.flex = '1';
+      siteRow.appendChild(siteInput);
+      var siteMsg = document.createElement('div');
+      var siteSaveBtn = document.createElement('button');
+      siteSaveBtn.className = 'btn-small';
+      siteSaveBtn.innerHTML = '<span class="btnLabel">Save</span>';
+      siteSaveBtn.onclick = function () {
+        siteMsg.textContent = '';
+        var token = localStorage.getItem(TOKEN_KEY);
+        setButtonLoading(siteSaveBtn, true, 'Saving…');
+        callApi('/api/campingv2/my-status', { token: token, partyId: data.myParty.partyId, status: data.myParty.status, site: siteInput.value.trim() })
+          .then(function () { showCampingV2Module(data.eventId); })
+          .catch(function (err) { setButtonLoading(siteSaveBtn, false); siteMsg.textContent = err.message; siteMsg.className = 'msg error'; });
+      };
+      siteRow.appendChild(siteSaveBtn);
+      wrap.appendChild(siteRow);
+      wrap.appendChild(siteMsg);
 
       var msg = document.createElement('div');
       var toggle = renderTriRadialToggle(data.myParty.status, function (newStatus) {
@@ -1891,6 +1913,8 @@
 
     // ---------- Camping (v2) — admin ----------
 
+    var campingAdminTab = 'events'; // 'events' | 'campsites' — remembered across re-renders within the session
+
     function showAdminCampingV2Home() {
       var main = document.getElementById('mainContent');
       main.innerHTML = '';
@@ -1905,33 +1929,41 @@
       banner.textContent = 'Admin View — manage campsites and camping events below.';
       main.appendChild(banner);
 
-      var siteTitle = document.createElement('h2');
-      siteTitle.className = 'section-title';
-      siteTitle.textContent = 'Campsites';
-      main.appendChild(siteTitle);
-      var addSiteBtn = document.createElement('button');
-      addSiteBtn.className = 'actionBtn';
-      addSiteBtn.innerHTML = '<span class="btnLabel">+ Add Campsite</span>';
-      addSiteBtn.onclick = function () { showAdminCampsiteForm(null); };
-      main.appendChild(addSiteBtn);
-      var sitesContainer = document.createElement('div');
-      sitesContainer.style.marginTop = '14px';
-      main.appendChild(sitesContainer);
-      loadAdminCampsites(sitesContainer);
+      var tabRow = document.createElement('div');
+      tabRow.style.marginBottom = '16px';
+      var eventsTabBtn = document.createElement('button');
+      eventsTabBtn.className = 'pillBtn' + (campingAdminTab === 'events' ? ' active' : '');
+      eventsTabBtn.textContent = 'Events';
+      eventsTabBtn.onclick = function () { campingAdminTab = 'events'; showAdminCampingV2Home(); };
+      tabRow.appendChild(eventsTabBtn);
+      var campsitesTabBtn = document.createElement('button');
+      campsitesTabBtn.className = 'pillBtn' + (campingAdminTab === 'campsites' ? ' active' : '');
+      campsitesTabBtn.textContent = 'Campsites';
+      campsitesTabBtn.onclick = function () { campingAdminTab = 'campsites'; showAdminCampingV2Home(); };
+      tabRow.appendChild(campsitesTabBtn);
+      main.appendChild(tabRow);
 
-      var evTitle = document.createElement('h2');
-      evTitle.className = 'section-title';
-      evTitle.textContent = 'Camping Events';
-      main.appendChild(evTitle);
-      var addEventBtn = document.createElement('button');
-      addEventBtn.className = 'actionBtn';
-      addEventBtn.innerHTML = '<span class="btnLabel">+ Create Event</span>';
-      addEventBtn.onclick = function () { showAdminCampingEventForm(null); };
-      main.appendChild(addEventBtn);
-      var eventsContainer = document.createElement('div');
-      eventsContainer.style.marginTop = '14px';
-      main.appendChild(eventsContainer);
-      loadAdminCampingEvents(eventsContainer);
+      if (campingAdminTab === 'campsites') {
+        var addSiteBtn = document.createElement('button');
+        addSiteBtn.className = 'actionBtn';
+        addSiteBtn.innerHTML = '<span class="btnLabel">+ Add Campsite</span>';
+        addSiteBtn.onclick = function () { showAdminCampsiteForm(null); };
+        main.appendChild(addSiteBtn);
+        var sitesContainer = document.createElement('div');
+        sitesContainer.style.marginTop = '14px';
+        main.appendChild(sitesContainer);
+        loadAdminCampsites(sitesContainer);
+      } else {
+        var addEventBtn = document.createElement('button');
+        addEventBtn.className = 'actionBtn';
+        addEventBtn.innerHTML = '<span class="btnLabel">+ Create Event</span>';
+        addEventBtn.onclick = function () { showAdminCampingEventForm(null); };
+        main.appendChild(addEventBtn);
+        var eventsContainer = document.createElement('div');
+        eventsContainer.style.marginTop = '14px';
+        main.appendChild(eventsContainer);
+        loadAdminCampingEvents(eventsContainer);
+      }
     }
 
     function loadAdminCampsites(container) {
