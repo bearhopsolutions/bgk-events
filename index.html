@@ -326,6 +326,71 @@
     .amendRow { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
     .amendRow input { width: 110px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--ink); font-size: 16px; min-height: 44px; }
 
+    /* Camping (v2) */
+    .campDetailsGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px 20px; font-size: 15px; margin-bottom: 14px; }
+    .campDetailsGrid .label { color: var(--text-muted); font-size: 13px; text-transform: uppercase; letter-spacing: 0.03em; }
+    .campMapWrap { position: relative; display: inline-block; max-width: 100%; margin-bottom: 16px; }
+    .campMapWrap img { max-width: 100%; display: block; border-radius: 8px; border: 1px solid var(--border); }
+    .campMarker {
+      position: absolute;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      border: 3px solid var(--text-muted);
+      transform: translate(-50%, -50%);
+      cursor: pointer;
+      box-shadow: 0 0 0 2px var(--card-bg);
+    }
+    .campMarker.booked { border-color: var(--ok); }
+    .campMarker.notgoing { border-color: var(--err); opacity: 0.55; }
+    .campMarker-admin { background: rgba(0,178,148,0.85); border-color: var(--ink); cursor: default; }
+    .campMarkerLabel {
+      position: absolute; transform: translate(-50%, 4px);
+      font-size: 11px; font-weight: 700; color: var(--ink);
+      background: var(--card-bg); padding: 1px 4px; border-radius: 4px; border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .rosterTable td.status-Booked { color: var(--ok); font-weight: 600; }
+    .rosterTable td.status-NotGoing { color: var(--err); }
+    .rosterTable td.status-Unbooked { color: var(--text-muted); }
+
+    .triToggle { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 14px 0; }
+    .triToggle-option {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      background: none; border: none; cursor: pointer; padding: 6px; color: var(--text-muted);
+    }
+    .triToggle-dot {
+      width: 46px; height: 46px; border-radius: 50%;
+      border: 3px solid var(--border);
+      display: flex; align-items: center; justify-content: center; font-size: 20px;
+      transition: all 0.25s ease;
+      background: var(--card-bg);
+    }
+    .triToggle-option span.triToggle-label { font-size: 12px; font-weight: 600; transition: color 0.25s ease; }
+    .triToggle-option.active .triToggle-dot { transform: scale(1.15); box-shadow: 0 0 0 4px rgba(0,0,0,0.04); }
+    .triToggle-option[data-status="Booked"].active .triToggle-dot { border-color: var(--ok); background: rgba(30,132,73,0.12); }
+    .triToggle-option[data-status="Booked"].active span.triToggle-label { color: var(--ok); }
+    .triToggle-option[data-status="Unbooked"].active .triToggle-dot { border-color: var(--text-muted); background: rgba(128,128,128,0.12); }
+    .triToggle-option[data-status="NotGoing"].active .triToggle-dot { border-color: var(--err); background: rgba(192,57,43,0.12); }
+    .triToggle-option[data-status="NotGoing"].active span.triToggle-label { color: var(--err); }
+    .triToggle-option:disabled { opacity: 0.5; cursor: default; }
+
+    .overlayBackdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+      display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 200;
+    }
+    .overlayCard { position: relative; width: 100%; max-width: 420px; }
+    .overlayClose {
+      position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%;
+      border: none; background: var(--bg); color: var(--ink); font-size: 16px; cursor: pointer;
+    }
+
+    .partyRow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .partyRow input[type=text] { width: 140px; min-height: 40px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--ink); font-size: 15px; }
+    .partyRow select { min-height: 40px; padding: 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--ink); font-size: 15px; }
+
+    .markerEditRow { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
+    .markerEditRow input[type=text] { width: 90px; min-height: 36px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--ink); }
+
     /* Mobile */
     @media (max-width: 640px) {
       main { padding: 18px 14px; }
@@ -392,6 +457,7 @@
     var THEME_KEY = 'bgkEventsTheme';
     var currentUser = null;
     var currentData = null; // { upcoming, enrolling, active } from /api/events (nav visibility)
+    var campingV2Events = []; // from /api/campingv2/events — separate from currentData, Camping (v2) isn't an Events-sheet module
     var viewMode = 'user'; // 'user' | 'admin' — only meaningful when currentUser.isAdmin
     var currentRoute = { view: 'home' };
 
@@ -595,6 +661,15 @@
         a.onclick = function () { navigateWeightLoss(); };
         nav.appendChild(a);
       }
+      var showCampingV2 = viewMode === 'admin' || campingV2Events.length > 0;
+      if (showCampingV2) {
+        var campA = document.createElement('a');
+        campA.className = 'navlink';
+        campA.id = 'navCampingV2Link';
+        campA.textContent = 'Camping';
+        campA.onclick = function () { navigateCampingV2(); };
+        nav.appendChild(campA);
+      }
       if (currentUser && currentUser.isAdmin && viewMode === 'admin') {
         var adminLink = document.createElement('a');
         adminLink.className = 'navlink';
@@ -609,13 +684,16 @@
     function updateNavHighlight() {
       var homeLink = document.getElementById('navHomeLink');
       var wlLink = document.getElementById('navWeightLossLink');
+      var campLink = document.getElementById('navCampingV2Link');
       var adminLink = document.getElementById('navAdminLink');
       var view = currentRoute && currentRoute.view;
       var section = view === 'home' ? 'home'
         : view === 'admin' ? 'admin'
-        : (String(view).indexOf('weightloss') === 0 ? 'weightloss' : null);
+        : (String(view).indexOf('weightloss') === 0 ? 'weightloss'
+        : (String(view).indexOf('campingv2') === 0 ? 'campingv2' : null));
       if (homeLink) homeLink.classList.toggle('navlink-active', section === 'home');
       if (wlLink) wlLink.classList.toggle('navlink-active', section === 'weightloss');
+      if (campLink) campLink.classList.toggle('navlink-active', section === 'campingv2');
       if (adminLink) adminLink.classList.toggle('navlink-active', section === 'admin');
     }
 
@@ -651,9 +729,13 @@
       var main = document.getElementById('mainContent');
       showLoadingRow(main, 'Loading…');
       var token = localStorage.getItem(TOKEN_KEY);
-      callApi('/api/events', { token: token })
-        .then(function (data) {
-          currentData = data;
+      Promise.all([
+        callApi('/api/events', { token: token }),
+        callApi('/api/campingv2/events', { token: token })
+      ])
+        .then(function (results) {
+          currentData = results[0];
+          campingV2Events = results[1];
           renderModuleNav();
           navigateHome();
         })
@@ -662,8 +744,12 @@
 
     function refreshNavData(then) {
       var token = localStorage.getItem(TOKEN_KEY);
-      return callApi('/api/events', { token: token }).then(function (data) {
-        currentData = data;
+      return Promise.all([
+        callApi('/api/events', { token: token }),
+        callApi('/api/campingv2/events', { token: token })
+      ]).then(function (results) {
+        currentData = results[0];
+        campingV2Events = results[1];
         renderModuleNav();
         if (then) then();
       });
@@ -677,6 +763,11 @@
     function navigateWeightLoss() {
       setRoute({ view: 'weightloss' });
       showWeightLossEntry();
+    }
+
+    function navigateCampingV2() {
+      setRoute({ view: 'campingv2' });
+      showCampingV2Entry();
     }
 
     // ---------- Home ----------
@@ -1386,6 +1477,1129 @@
       wrap.appendChild(submitBtn);
       wrap.appendChild(msg);
       return wrap;
+    }
+
+    // ---------- Camping module (v2) ----------
+    // Entirely new/independent of the WeightLoss module and of the old dormant Camping code
+    // above — its own sheets (Campsites/CampingEventsV2/CampingPartiesV2), own API routes,
+    // own render functions. Shared low-level helpers (callApi, setButtonLoading, showErrorIn,
+    // eventStatusBadge, wrapTable, the .card/.actionBtn/.grid/.eventCard CSS) are platform
+    // infra already used everywhere in this file, not WeightLoss-specific.
+
+    var TRI_STATUS_META = [
+      { status: 'Booked', icon: '✅', label: 'Booked' },
+      { status: 'Unbooked', icon: '🕓', label: 'Unbooked' },
+      { status: 'NotGoing', icon: '✖️', label: 'Not Going' }
+    ];
+
+    function renderTriRadialToggle(currentStatus, onSelect, disabled) {
+      var wrap = document.createElement('div');
+      wrap.className = 'triToggle';
+      var active = currentStatus || 'Unbooked';
+      TRI_STATUS_META.forEach(function (meta) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'triToggle-option' + (active === meta.status ? ' active' : '');
+        btn.setAttribute('data-status', meta.status);
+        btn.disabled = !!disabled;
+        btn.innerHTML = '<span class="triToggle-dot">' + meta.icon + '</span><span class="triToggle-label">' + meta.label + '</span>';
+        btn.onclick = function () {
+          active = meta.status;
+          Array.prototype.forEach.call(wrap.children, function (child) {
+            child.classList.toggle('active', child.getAttribute('data-status') === active);
+          });
+          onSelect(active);
+        };
+        wrap.appendChild(btn);
+      });
+      return wrap;
+    }
+
+    function showOverlay(contentEl) {
+      closeOverlay();
+      var backdrop = document.createElement('div');
+      backdrop.className = 'overlayBackdrop';
+      backdrop.id = 'activeOverlay';
+      var card = document.createElement('div');
+      card.className = 'card overlayCard';
+      var closeBtn = document.createElement('button');
+      closeBtn.className = 'overlayClose';
+      closeBtn.textContent = '×';
+      closeBtn.onclick = function () { closeOverlay(); };
+      card.appendChild(closeBtn);
+      card.appendChild(contentEl);
+      backdrop.appendChild(card);
+      document.body.appendChild(backdrop);
+    }
+
+    function closeOverlay() {
+      var existing = document.getElementById('activeOverlay');
+      if (existing) existing.remove();
+    }
+
+    // ---------- Camping (v2) — participant entry/picker ----------
+
+    function showCampingV2Entry() {
+      if (viewMode === 'admin') { showAdminCampingV2Home(); return; }
+      if (campingV2Events.length === 0) { showCampingV2Empty(); return; }
+      if (campingV2Events.length === 1) {
+        setRoute({ view: 'campingv2-module', eventId: campingV2Events[0].eventId });
+        showCampingV2Module(campingV2Events[0].eventId);
+        return;
+      }
+      showCampingV2Picker(campingV2Events);
+    }
+
+    function showCampingV2Empty() {
+      var main = document.getElementById('mainContent');
+      main.innerHTML = '';
+      var h = document.createElement('h2');
+      h.className = 'section-title';
+      h.textContent = 'Camping';
+      main.appendChild(h);
+      var empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = 'Nothing here right now.';
+      main.appendChild(empty);
+    }
+
+    function showCampingV2Picker(list) {
+      var main = document.getElementById('mainContent');
+      main.innerHTML = '';
+      var h = document.createElement('h2');
+      h.className = 'section-title';
+      h.textContent = 'Camping';
+      main.appendChild(h);
+      var grid = document.createElement('div');
+      grid.className = 'grid';
+      list.forEach(function (ev) {
+        var card = document.createElement('div');
+        card.className = 'eventCard';
+        var h3 = document.createElement('h3');
+        h3.textContent = ev.name;
+        h3.appendChild(eventStatusBadge(ev.status === 'ended' ? 'Ended' : 'Active'));
+        card.appendChild(h3);
+        if (ev.isParticipant) {
+          var p = document.createElement('div');
+          p.className = 'desc';
+          p.textContent = "You're signed up";
+          card.appendChild(p);
+        }
+        var btn = document.createElement('button');
+        btn.textContent = 'View';
+        btn.onclick = function () {
+          setRoute({ view: 'campingv2-module', eventId: ev.eventId });
+          showCampingV2Module(ev.eventId);
+        };
+        card.appendChild(btn);
+        grid.appendChild(card);
+      });
+      main.appendChild(grid);
+    }
+
+    function showCampingV2Module(eventId) {
+      var main = document.getElementById('mainContent');
+      showLoadingRow(main, 'Loading…');
+      var token = localStorage.getItem(TOKEN_KEY);
+      callApi('/api/campingv2/module', { token: token, eventId: eventId })
+        .then(function (data) { renderCampingV2Module(data); })
+        .catch(function (err) { showErrorIn(main, err); });
+    }
+
+    function campingStatusClassSuffix(status) {
+      if (status === 'Booked') return 'booked';
+      if (status === 'NotGoing') return 'notgoing';
+      return '';
+    }
+
+    function renderCampsiteDetails(campsite) {
+      var wrap = document.createElement('div');
+      var grid = document.createElement('div');
+      grid.className = 'campDetailsGrid';
+      function detail(label, value) {
+        var d = document.createElement('div');
+        var l = document.createElement('div'); l.className = 'label'; l.textContent = label;
+        var v = document.createElement('div'); v.textContent = value || '—';
+        d.appendChild(l); d.appendChild(v);
+        grid.appendChild(d);
+      }
+      detail('Campsite', campsite.name);
+      if (campsite.url) {
+        var d = document.createElement('div');
+        var l = document.createElement('div'); l.className = 'label'; l.textContent = 'Link';
+        var a = document.createElement('a'); a.href = campsite.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'View site';
+        d.appendChild(l); d.appendChild(a);
+        grid.appendChild(d);
+      }
+      detail('ADA accessible', campsite.adaAccessible ? 'Yes' : 'No');
+      detail('Cell reception', campsite.cellReception);
+      detail('Activities', campsite.activities);
+      detail('What we liked', campsite.liked);
+      detail('What we didn\'t like', campsite.disliked);
+      wrap.appendChild(grid);
+      return wrap;
+    }
+
+    function renderCampsiteMapView(campsite, roster) {
+      var wrap = document.createElement('div');
+      if (!campsite.hasMap || !campsite.mapUrl) return wrap;
+
+      var h = document.createElement('h2');
+      h.className = 'section-title';
+      h.textContent = 'Campsite Map';
+      wrap.appendChild(h);
+
+      var mapWrap = document.createElement('div');
+      mapWrap.className = 'campMapWrap';
+      var img = document.createElement('img');
+      img.src = campsite.mapUrl;
+      mapWrap.appendChild(img);
+
+      var siteStatus = {};
+      (roster || []).forEach(function (p) {
+        if (p.site) siteStatus[String(p.site).trim().toLowerCase()] = p.status;
+      });
+
+      (campsite.markers || []).forEach(function (m) {
+        var status = siteStatus[String(m.label).trim().toLowerCase()];
+        var dot = document.createElement('div');
+        dot.className = 'campMarker' + (status ? ' ' + campingStatusClassSuffix(status) : '');
+        dot.style.left = m.xPct + '%';
+        dot.style.top = m.yPct + '%';
+        dot.title = m.label;
+        mapWrap.appendChild(dot);
+        var label = document.createElement('div');
+        label.className = 'campMarkerLabel';
+        label.style.left = m.xPct + '%';
+        label.style.top = m.yPct + '%';
+        label.textContent = m.label;
+        mapWrap.appendChild(label);
+      });
+
+      wrap.appendChild(mapWrap);
+      return wrap;
+    }
+
+    function renderPartyRosterTable(roster) {
+      if (!roster || !roster.length) {
+        var empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'No one has signed up yet.';
+        return empty;
+      }
+      var table = document.createElement('table');
+      table.className = 'rosterTable';
+      var thead = document.createElement('tr');
+      ['Party', 'Site', 'Status'].forEach(function (t) {
+        var th = document.createElement('th'); th.textContent = t; thead.appendChild(th);
+      });
+      table.appendChild(thead);
+      roster.forEach(function (p) {
+        var tr = document.createElement('tr');
+        var tdName = document.createElement('td'); tdName.textContent = p.partyName; tr.appendChild(tdName);
+        var tdSite = document.createElement('td'); tdSite.textContent = p.site || '—'; tr.appendChild(tdSite);
+        var tdStatus = document.createElement('td');
+        tdStatus.className = 'status-' + (p.status || 'Unbooked');
+        tdStatus.textContent = p.status === 'Booked' ? 'Booked' : (p.status === 'NotGoing' ? 'Not Going' : 'Unbooked');
+        tr.appendChild(tdStatus);
+        table.appendChild(tr);
+      });
+      return wrapTable(table);
+    }
+
+    function renderCampingSignupPrompt(eventId) {
+      var wrap = document.createElement('div');
+      wrap.className = 'card';
+      wrap.style.width = 'auto';
+      wrap.style.maxWidth = '420px';
+
+      var btn = document.createElement('button');
+      btn.textContent = 'Sign Up for This Event';
+      var formWrap = document.createElement('div');
+      formWrap.className = 'hidden';
+      btn.onclick = function () { btn.classList.add('hidden'); formWrap.classList.remove('hidden'); };
+      wrap.appendChild(btn);
+
+      function field(labelText, input) {
+        var label = document.createElement('label');
+        label.textContent = labelText;
+        formWrap.appendChild(label);
+        formWrap.appendChild(input);
+      }
+
+      var nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      field('Party name', nameInput);
+
+      var siteInput = document.createElement('input');
+      siteInput.type = 'text';
+      field('Site (if you already know it)', siteInput);
+
+      var statusLabel = document.createElement('label');
+      statusLabel.textContent = 'Status';
+      formWrap.appendChild(statusLabel);
+      var chosenStatus = 'Unbooked';
+      formWrap.appendChild(renderTriRadialToggle('Unbooked', function (s) { chosenStatus = s; }));
+
+      var msg = document.createElement('div');
+      formWrap.appendChild(msg);
+
+      var submitBtn = document.createElement('button');
+      submitBtn.innerHTML = '<span class="btnLabel">Save Signup</span>';
+      submitBtn.onclick = function () {
+        msg.textContent = '';
+        if (!nameInput.value.trim()) { msg.textContent = 'Enter a party name.'; msg.className = 'msg error'; return; }
+        setButtonLoading(submitBtn, true, 'Saving…');
+        var token = localStorage.getItem(TOKEN_KEY);
+        callApi('/api/campingv2/signup', { token: token, eventId: eventId, partyName: nameInput.value.trim(), site: siteInput.value.trim(), status: chosenStatus })
+          .then(function () { showCampingV2Module(eventId); })
+          .catch(function (err) { setButtonLoading(submitBtn, false); msg.textContent = err.message; msg.className = 'msg error'; });
+      };
+      formWrap.appendChild(submitBtn);
+
+      wrap.appendChild(formWrap);
+      return wrap;
+    }
+
+    function renderMyPartyPanel(data) {
+      var wrap = document.createElement('div');
+      wrap.className = 'card';
+      wrap.style.width = 'auto';
+      wrap.style.maxWidth = '420px';
+
+      var h3 = document.createElement('h3');
+      h3.textContent = 'Your Party: ' + data.myParty.partyName;
+      wrap.appendChild(h3);
+
+      var siteLine = document.createElement('div');
+      siteLine.className = 'desc';
+      siteLine.textContent = 'Site: ' + (data.myParty.site || 'Not yet assigned');
+      wrap.appendChild(siteLine);
+
+      if (data.needsRedeclare) {
+        var note = document.createElement('div');
+        note.className = 'msg error';
+        note.textContent = 'This event switched to its backup campsite — confirm your details to continue.';
+        wrap.appendChild(note);
+        var reopenBtn = document.createElement('button');
+        reopenBtn.className = 'btn-secondary';
+        reopenBtn.textContent = 'Confirm Now';
+        reopenBtn.onclick = function () { openRedeclarePopup(data); };
+        wrap.appendChild(reopenBtn);
+        return wrap;
+      }
+
+      var msg = document.createElement('div');
+      var toggle = renderTriRadialToggle(data.myParty.status, function (newStatus) {
+        msg.textContent = '';
+        var token = localStorage.getItem(TOKEN_KEY);
+        callApi('/api/campingv2/my-status', { token: token, partyId: data.myParty.partyId, status: newStatus })
+          .then(function () { showCampingV2Module(data.eventId); })
+          .catch(function (err) { msg.textContent = err.message; msg.className = 'msg error'; });
+      });
+      wrap.appendChild(toggle);
+      wrap.appendChild(msg);
+      return wrap;
+    }
+
+    function openRedeclarePopup(data) {
+      var content = document.createElement('div');
+      var h1 = document.createElement('h1');
+      h1.textContent = 'Confirm Your Spot';
+      content.appendChild(h1);
+      var p = document.createElement('p');
+      p.className = 'msg';
+      p.textContent = 'This event switched to its backup campsite. Let everyone know your site and status.';
+      content.appendChild(p);
+
+      var label = document.createElement('label');
+      label.textContent = 'Site';
+      content.appendChild(label);
+      var siteInput = document.createElement('input');
+      siteInput.type = 'text';
+      siteInput.value = data.myParty.site || '';
+      content.appendChild(siteInput);
+
+      var statusLabel = document.createElement('label');
+      statusLabel.textContent = 'Status';
+      content.appendChild(statusLabel);
+      var chosenStatus = data.myParty.status || 'Unbooked';
+      content.appendChild(renderTriRadialToggle(chosenStatus, function (s) { chosenStatus = s; }));
+
+      var msg = document.createElement('div');
+      content.appendChild(msg);
+
+      var submitBtn = document.createElement('button');
+      submitBtn.innerHTML = '<span class="btnLabel">Save</span>';
+      submitBtn.onclick = function () {
+        setButtonLoading(submitBtn, true, 'Saving…');
+        var token = localStorage.getItem(TOKEN_KEY);
+        callApi('/api/campingv2/redeclare', { token: token, partyId: data.myParty.partyId, status: chosenStatus, site: siteInput.value.trim() })
+          .then(function () { closeOverlay(); showCampingV2Module(data.eventId); })
+          .catch(function (err) { setButtonLoading(submitBtn, false); msg.textContent = err.message; msg.className = 'msg error'; });
+      };
+      content.appendChild(submitBtn);
+
+      showOverlay(content);
+    }
+
+    function renderCampingV2Module(data) {
+      var main = document.getElementById('mainContent');
+      main.innerHTML = '';
+
+      var h = document.createElement('h2');
+      h.className = 'section-title';
+      h.textContent = 'Camping';
+      main.appendChild(h);
+
+      var titleH3 = document.createElement('h3');
+      titleH3.appendChild(document.createTextNode(data.name + ' '));
+      titleH3.appendChild(eventStatusBadge(data.status === 'ended' ? 'Ended' : 'Active'));
+      main.appendChild(titleH3);
+
+      var meta = document.createElement('div');
+      meta.className = 'desc';
+      meta.textContent = data.eventDate + ' · ' + data.days + ' day' + (data.days === 1 ? '' : 's') + ' · booking opens ' + data.bookingDate;
+      main.appendChild(meta);
+
+      if (data.backupActive) {
+        var note = document.createElement('div');
+        note.className = 'adminBanner';
+        note.textContent = 'This event has switched to its backup campsite.';
+        main.appendChild(note);
+      }
+
+      if (data.campsite) {
+        main.appendChild(renderCampsiteDetails(data.campsite));
+        main.appendChild(renderCampsiteMapView(data.campsite, data.roster));
+      }
+
+      if (data.myParty) {
+        main.appendChild(renderMyPartyPanel(data));
+      } else {
+        main.appendChild(renderCampingSignupPrompt(data.eventId));
+      }
+
+      var rosterTitle = document.createElement('h2');
+      rosterTitle.className = 'section-title';
+      rosterTitle.textContent = "Who's Going";
+      main.appendChild(rosterTitle);
+      main.appendChild(renderPartyRosterTable(data.roster));
+
+      if (data.needsRedeclare) openRedeclarePopup(data);
+    }
+
+    // ---------- Camping (v2) — admin ----------
+
+    function showAdminCampingV2Home() {
+      var main = document.getElementById('mainContent');
+      main.innerHTML = '';
+
+      var h = document.createElement('h2');
+      h.className = 'section-title';
+      h.textContent = 'Camping';
+      main.appendChild(h);
+
+      var banner = document.createElement('div');
+      banner.className = 'adminBanner';
+      banner.textContent = 'Admin View — manage campsites and camping events below.';
+      main.appendChild(banner);
+
+      var siteTitle = document.createElement('h2');
+      siteTitle.className = 'section-title';
+      siteTitle.textContent = 'Campsites';
+      main.appendChild(siteTitle);
+      var addSiteBtn = document.createElement('button');
+      addSiteBtn.className = 'actionBtn';
+      addSiteBtn.innerHTML = '<span class="btnLabel">+ Add Campsite</span>';
+      addSiteBtn.onclick = function () { showAdminCampsiteForm(null); };
+      main.appendChild(addSiteBtn);
+      var sitesContainer = document.createElement('div');
+      sitesContainer.style.marginTop = '14px';
+      main.appendChild(sitesContainer);
+      loadAdminCampsites(sitesContainer);
+
+      var evTitle = document.createElement('h2');
+      evTitle.className = 'section-title';
+      evTitle.textContent = 'Camping Events';
+      main.appendChild(evTitle);
+      var addEventBtn = document.createElement('button');
+      addEventBtn.className = 'actionBtn';
+      addEventBtn.innerHTML = '<span class="btnLabel">+ Create Event</span>';
+      addEventBtn.onclick = function () { showAdminCampingEventForm(null); };
+      main.appendChild(addEventBtn);
+      var eventsContainer = document.createElement('div');
+      eventsContainer.style.marginTop = '14px';
+      main.appendChild(eventsContainer);
+      loadAdminCampingEvents(eventsContainer);
+    }
+
+    function loadAdminCampsites(container) {
+      showLoadingRow(container, 'Loading campsites…');
+      var token = localStorage.getItem(TOKEN_KEY);
+      callApi('/api/admin/campingv2/campsites/list', { token: token })
+        .then(function (list) { renderAdminCampsiteList(list, container); })
+        .catch(function (err) { showErrorIn(container, err); });
+    }
+
+    function renderAdminCampsiteList(list, container) {
+      container.innerHTML = '';
+      if (!list.length) {
+        var empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'No campsites yet.';
+        container.appendChild(empty);
+        return;
+      }
+      var grid = document.createElement('div');
+      grid.className = 'grid';
+      list.forEach(function (c) {
+        var card = document.createElement('div');
+        card.className = 'eventCard';
+        var h3 = document.createElement('h3');
+        h3.textContent = c.name;
+        card.appendChild(h3);
+        var desc = document.createElement('div');
+        desc.className = 'desc';
+        desc.textContent = (c.cellReception ? 'Reception: ' + c.cellReception : '') + (c.adaAccessible ? ' · ADA accessible' : '');
+        card.appendChild(desc);
+        var btn = document.createElement('button');
+        btn.textContent = 'Edit';
+        btn.onclick = function () { showAdminCampsiteForm(c); };
+        card.appendChild(btn);
+        grid.appendChild(card);
+      });
+      container.appendChild(grid);
+    }
+
+    function loadAdminCampingEvents(container) {
+      showLoadingRow(container, 'Loading events…');
+      var token = localStorage.getItem(TOKEN_KEY);
+      callApi('/api/admin/campingv2/events/list', { token: token })
+        .then(function (list) { renderAdminCampingEventList(list, container); })
+        .catch(function (err) { showErrorIn(container, err); });
+    }
+
+    function renderAdminCampingEventList(list, container) {
+      container.innerHTML = '';
+      if (!list.length) {
+        var empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'No camping events yet.';
+        container.appendChild(empty);
+        return;
+      }
+      var grid = document.createElement('div');
+      grid.className = 'grid';
+      list.slice().reverse().forEach(function (ev) {
+        var card = document.createElement('div');
+        card.className = 'eventCard';
+        var h3 = document.createElement('h3');
+        h3.textContent = ev.name;
+        h3.appendChild(eventStatusBadge(ev.status === 'ended' ? 'Ended' : 'Active'));
+        card.appendChild(h3);
+        var desc = document.createElement('div');
+        desc.className = 'desc';
+        desc.textContent = ev.eventDate + ' · ' + ev.days + ' day' + (ev.days === 1 ? '' : 's') + (ev.backupActive ? ' · Using backup campsite' : '');
+        card.appendChild(desc);
+        var btn = document.createElement('button');
+        btn.textContent = 'Edit';
+        btn.onclick = function () { showAdminCampingEventForm(ev); };
+        card.appendChild(btn);
+        grid.appendChild(card);
+      });
+      container.appendChild(grid);
+    }
+
+    function showAdminCampsiteForm(existing) {
+      var main = document.getElementById('mainContent');
+      main.innerHTML = '';
+
+      var h = document.createElement('h2');
+      h.className = 'section-title';
+      h.textContent = existing ? 'Edit Campsite' : 'Add Campsite';
+      main.appendChild(h);
+
+      var form = document.createElement('div');
+      form.className = 'card';
+      form.style.width = 'auto';
+      form.style.maxWidth = '460px';
+
+      function field(labelText, input) {
+        var label = document.createElement('label');
+        label.textContent = labelText;
+        form.appendChild(label);
+        form.appendChild(input);
+      }
+
+      var nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.value = existing ? existing.name : '';
+      field('Name', nameInput);
+
+      var urlInput = document.createElement('input');
+      urlInput.type = 'text';
+      urlInput.value = existing ? (existing.url || '') : '';
+      field('URL', urlInput);
+
+      var adaRow = document.createElement('div');
+      adaRow.className = 'tagRow';
+      var adaInput = document.createElement('input');
+      adaInput.type = 'checkbox';
+      adaInput.style.width = 'auto';
+      adaInput.style.minHeight = '0';
+      adaInput.checked = existing ? !!existing.adaAccessible : false;
+      adaRow.appendChild(adaInput);
+      var adaLabel = document.createElement('label');
+      adaLabel.textContent = 'ADA accessible';
+      adaLabel.style.margin = '0';
+      adaRow.appendChild(adaLabel);
+      form.appendChild(adaRow);
+
+      var likedInput = document.createElement('textarea');
+      likedInput.value = existing ? (existing.liked || '') : '';
+      field('What we liked', likedInput);
+
+      var dislikedInput = document.createElement('textarea');
+      dislikedInput.value = existing ? (existing.disliked || '') : '';
+      field("What we didn't like", dislikedInput);
+
+      var activitiesInput = document.createElement('input');
+      activitiesInput.type = 'text';
+      activitiesInput.placeholder = 'e.g. Fishing, watersports, hiking';
+      activitiesInput.value = existing ? (existing.activities || '') : '';
+      field('Activities', activitiesInput);
+
+      var cellSelect = document.createElement('select');
+      ['None', 'Poor', 'Fair', 'Good', 'Excellent'].forEach(function (v) {
+        var opt = document.createElement('option');
+        opt.value = v; opt.textContent = v;
+        if (existing && existing.cellReception === v) opt.selected = true;
+        cellSelect.appendChild(opt);
+      });
+      field('Cell reception', cellSelect);
+
+      var msg = document.createElement('div');
+      form.appendChild(msg);
+
+      var campsiteId = existing ? existing.campsiteId : null;
+      var saveBtn = document.createElement('button');
+      saveBtn.innerHTML = '<span class="btnLabel">Save Campsite</span>';
+      saveBtn.onclick = function () {
+        msg.textContent = '';
+        if (!nameInput.value.trim()) { msg.textContent = 'Enter a name.'; msg.className = 'msg error'; return; }
+        setButtonLoading(saveBtn, true, 'Saving…');
+        var token = localStorage.getItem(TOKEN_KEY);
+        callApi('/api/admin/campingv2/campsites/save', { token: token, campsite: {
+          CampsiteID: campsiteId, Name: nameInput.value.trim(), Url: urlInput.value.trim(),
+          AdaAccessible: adaInput.checked, Liked: likedInput.value, Disliked: dislikedInput.value,
+          Activities: activitiesInput.value, CellReception: cellSelect.value
+        } })
+          .then(function (res) {
+            setButtonLoading(saveBtn, false);
+            msg.textContent = 'Saved.';
+            msg.className = 'msg ok';
+            if (!campsiteId) {
+              campsiteId = res.campsiteId;
+              renderAdminCampsiteMapSection(mapContainer, { campsiteId: campsiteId, mapUrl: '', hasMap: false, markers: [] });
+            }
+          })
+          .catch(function (err) { setButtonLoading(saveBtn, false); msg.textContent = err.message; msg.className = 'msg error'; });
+      };
+      form.appendChild(saveBtn);
+      main.appendChild(form);
+
+      var mapTitle = document.createElement('h2');
+      mapTitle.className = 'section-title';
+      mapTitle.textContent = 'Campsite Map';
+      main.appendChild(mapTitle);
+      var mapContainer = document.createElement('div');
+      main.appendChild(mapContainer);
+      renderAdminCampsiteMapSection(mapContainer, existing);
+
+      var backBtn = document.createElement('button');
+      backBtn.className = 'actionBtn secondary';
+      backBtn.innerHTML = '<span class="btnLabel">Back to Camping Admin</span>';
+      backBtn.style.marginTop = '20px';
+      backBtn.onclick = function () { showAdminCampingV2Home(); };
+      main.appendChild(backBtn);
+    }
+
+    // Marker "move" is done via delete + re-add (click the map to add, Remove to delete) rather
+    // than true drag-to-reposition — simpler and reliable, and covers the same end result.
+    function renderAdminCampsiteMapSection(container, campsite) {
+      container.innerHTML = '';
+      if (!campsite || !campsite.campsiteId) {
+        var note = document.createElement('div');
+        note.className = 'empty';
+        note.textContent = 'Save the campsite first, then come back here to add a map photo.';
+        container.appendChild(note);
+        return;
+      }
+
+      var campsiteId = campsite.campsiteId;
+      var mapUrl = campsite.mapUrl || '';
+      var markers = (campsite.markers || []).slice();
+      var mapWrap = null;
+
+      function renderMarkerDots() {
+        if (!mapWrap) return;
+        Array.prototype.slice.call(mapWrap.querySelectorAll('.campMarker, .campMarkerLabel')).forEach(function (el) { el.remove(); });
+        markers.forEach(function (m) {
+          var dot = document.createElement('div');
+          dot.className = 'campMarker campMarker-admin';
+          dot.style.left = m.xPct + '%'; dot.style.top = m.yPct + '%';
+          mapWrap.appendChild(dot);
+          var label = document.createElement('div');
+          label.className = 'campMarkerLabel';
+          label.style.left = m.xPct + '%'; label.style.top = m.yPct + '%';
+          label.textContent = m.label;
+          mapWrap.appendChild(label);
+        });
+      }
+
+      var listContainer = document.createElement('div');
+      listContainer.style.marginTop = '10px';
+
+      function renderMarkerList() {
+        listContainer.innerHTML = '';
+        if (!markers.length) {
+          var e = document.createElement('div');
+          e.className = 'empty';
+          e.textContent = 'No markers yet — click the map above to add one.';
+          listContainer.appendChild(e);
+          return;
+        }
+        markers.forEach(function (m, idx) {
+          var row = document.createElement('div');
+          row.className = 'markerEditRow';
+          var labelInput = document.createElement('input');
+          labelInput.type = 'text';
+          labelInput.value = m.label;
+          labelInput.onchange = function () { m.label = labelInput.value.trim(); renderMarkerDots(); };
+          row.appendChild(labelInput);
+          var removeBtn = document.createElement('button');
+          removeBtn.className = 'btn-small btn-secondary';
+          removeBtn.textContent = 'Remove';
+          removeBtn.onclick = function () { markers.splice(idx, 1); renderMarkerDots(); renderMarkerList(); };
+          row.appendChild(removeBtn);
+          listContainer.appendChild(row);
+        });
+      }
+
+      function renderMapImage() {
+        if (mapWrap) { mapWrap.remove(); mapWrap = null; }
+        if (!mapUrl) return;
+        mapWrap = document.createElement('div');
+        mapWrap.className = 'campMapWrap';
+        var img = document.createElement('img');
+        img.src = mapUrl;
+        mapWrap.appendChild(img);
+        img.addEventListener('click', function (ev) {
+          var rect = img.getBoundingClientRect();
+          var xPct = ((ev.clientX - rect.left) / rect.width) * 100;
+          var yPct = ((ev.clientY - rect.top) / rect.height) * 100;
+          var label = prompt('Site label for this marker?');
+          if (!label) return;
+          markers.push({ id: 'm' + Date.now() + Math.floor(Math.random() * 1000), label: label.trim(), xPct: xPct, yPct: yPct });
+          renderMarkerDots();
+          renderMarkerList();
+        });
+        container.insertBefore(mapWrap, uploadLabel);
+        renderMarkerDots();
+      }
+
+      var uploadLabel = document.createElement('label');
+      uploadLabel.textContent = mapUrl ? 'Replace map photo' : 'Upload map photo';
+      container.appendChild(uploadLabel);
+      var uploadInput = document.createElement('input');
+      uploadInput.type = 'file';
+      uploadInput.accept = 'image/*';
+      container.appendChild(uploadInput);
+
+      var uploadMsg = document.createElement('div');
+      container.appendChild(uploadMsg);
+
+      uploadInput.onchange = function () {
+        var file = uploadInput.files && uploadInput.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function () {
+          var base64 = reader.result.split(',')[1];
+          uploadMsg.textContent = 'Uploading and scanning for site labels…';
+          uploadMsg.className = 'msg';
+          var token = localStorage.getItem(TOKEN_KEY);
+          callApi('/api/admin/campingv2/campsites/map/upload', { token: token, campsiteId: campsiteId, base64: base64, mimeType: file.type })
+            .then(function (res) {
+              mapUrl = res.url;
+              markers = res.markers || [];
+              uploadMsg.textContent = markers.length
+                ? ('Found ' + markers.length + ' possible site label(s) — review below, then Save Markers.')
+                : 'Uploaded. No site labels were auto-detected — click the map to add markers by hand.';
+              uploadMsg.className = 'msg ok';
+              renderMapImage();
+              renderMarkerList();
+            })
+            .catch(function (err) { uploadMsg.textContent = err.message; uploadMsg.className = 'msg error'; });
+        };
+        reader.readAsDataURL(file);
+      };
+
+      container.appendChild(listContainer);
+
+      var saveMarkersBtn = document.createElement('button');
+      saveMarkersBtn.className = 'actionBtn';
+      saveMarkersBtn.style.marginTop = '10px';
+      saveMarkersBtn.innerHTML = '<span class="btnLabel">Save Markers</span>';
+      saveMarkersBtn.onclick = function () {
+        setButtonLoading(saveMarkersBtn, true, 'Saving…');
+        var token = localStorage.getItem(TOKEN_KEY);
+        callApi('/api/admin/campingv2/campsites/map/markers', { token: token, campsiteId: campsiteId, markers: markers })
+          .then(function () { setButtonLoading(saveMarkersBtn, false); uploadMsg.textContent = 'Markers saved.'; uploadMsg.className = 'msg ok'; })
+          .catch(function (err) { setButtonLoading(saveMarkersBtn, false); uploadMsg.textContent = err.message; uploadMsg.className = 'msg error'; });
+      };
+      container.appendChild(saveMarkersBtn);
+
+      renderMapImage();
+      renderMarkerList();
+    }
+
+    function showAdminCampingEventForm(existing) {
+      var main = document.getElementById('mainContent');
+      showLoadingRow(main, 'Loading…');
+      var token = localStorage.getItem(TOKEN_KEY);
+      callApi('/api/admin/campingv2/campsites/list', { token: token })
+        .then(function (campsites) { renderAdminCampingEventForm(existing, campsites); })
+        .catch(function (err) { showErrorIn(main, err); });
+    }
+
+    function renderAdminCampingEventForm(existing, campsites) {
+      var main = document.getElementById('mainContent');
+      main.innerHTML = '';
+      var token = localStorage.getItem(TOKEN_KEY);
+
+      var h = document.createElement('h2');
+      h.className = 'section-title';
+      h.textContent = existing ? 'Edit Camping Event' : 'Create Camping Event';
+      main.appendChild(h);
+
+      var form = document.createElement('div');
+      form.className = 'card';
+      form.style.width = 'auto';
+      form.style.maxWidth = '460px';
+
+      function field(labelText, input) {
+        var label = document.createElement('label');
+        label.textContent = labelText;
+        form.appendChild(label);
+        form.appendChild(input);
+      }
+
+      var nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.value = existing ? existing.name : '';
+      field('Event name', nameInput);
+
+      var visSelect = document.createElement('select');
+      ['All', 'Hidden'].forEach(function (v) {
+        var opt = document.createElement('option');
+        opt.value = v; opt.textContent = v === 'All' ? 'Visible to everyone' : 'Hidden';
+        if (existing && existing.visibility === v) opt.selected = true;
+        visSelect.appendChild(opt);
+      });
+      field('Visibility', visSelect);
+
+      var campsiteSelect = document.createElement('select');
+      campsites.forEach(function (c) {
+        var opt = document.createElement('option');
+        opt.value = c.campsiteId; opt.textContent = c.name;
+        if (existing ? existing.campsiteId === c.campsiteId : campsites[0] === c) opt.selected = true;
+        campsiteSelect.appendChild(opt);
+      });
+      field('Campsite', campsiteSelect);
+
+      var newCampsiteToggle = document.createElement('a');
+      newCampsiteToggle.className = 'authSwitch';
+      newCampsiteToggle.style.display = 'block';
+      newCampsiteToggle.style.margin = '2px 0 12px';
+      newCampsiteToggle.style.marginLeft = '0';
+      newCampsiteToggle.textContent = '+ New campsite';
+      form.appendChild(newCampsiteToggle);
+
+      var newCampsiteBox = document.createElement('div');
+      newCampsiteBox.className = 'hidden';
+      form.appendChild(newCampsiteBox);
+      newCampsiteToggle.onclick = function () { newCampsiteBox.classList.toggle('hidden'); };
+
+      var ncNameInput = document.createElement('input');
+      ncNameInput.type = 'text';
+      ncNameInput.placeholder = 'New campsite name';
+      newCampsiteBox.appendChild(ncNameInput);
+      var ncMsg = document.createElement('div');
+      newCampsiteBox.appendChild(ncMsg);
+      var ncSaveBtn = document.createElement('button');
+      ncSaveBtn.className = 'btn-small';
+      ncSaveBtn.textContent = 'Add Campsite';
+      ncSaveBtn.onclick = function () {
+        if (!ncNameInput.value.trim()) { ncMsg.textContent = 'Enter a name.'; ncMsg.className = 'msg error'; return; }
+        callApi('/api/admin/campingv2/campsites/save', { token: token, campsite: { Name: ncNameInput.value.trim() } })
+          .then(function (res) {
+            var opt = document.createElement('option');
+            opt.value = res.campsiteId; opt.textContent = ncNameInput.value.trim();
+            opt.selected = true;
+            campsiteSelect.appendChild(opt);
+            var backupOpt = document.createElement('option');
+            backupOpt.value = res.campsiteId; backupOpt.textContent = ncNameInput.value.trim();
+            backupSelect.appendChild(backupOpt);
+            ncNameInput.value = '';
+            newCampsiteBox.classList.add('hidden');
+            ncMsg.textContent = '';
+          })
+          .catch(function (err) { ncMsg.textContent = err.message; ncMsg.className = 'msg error'; });
+      };
+      newCampsiteBox.appendChild(ncSaveBtn);
+
+      var eventDateInput = document.createElement('input');
+      eventDateInput.type = 'date';
+      eventDateInput.value = existing ? existing.eventDate : '';
+      field('Event date', eventDateInput);
+
+      var bookingDateInput = document.createElement('input');
+      bookingDateInput.type = 'date';
+      bookingDateInput.value = existing ? existing.bookingDate : '';
+      field('Booking date', bookingDateInput);
+
+      var bookingHint = document.createElement('div');
+      bookingHint.className = 'desc';
+      form.appendChild(bookingHint);
+
+      function monthsBefore(baseParts, n) {
+        var d = new Date(Date.UTC(baseParts[0], baseParts[1] - 1, baseParts[2]));
+        d.setUTCMonth(d.getUTCMonth() - n);
+        return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
+      }
+      function refreshBookingHint() {
+        if (!eventDateInput.value) { bookingHint.textContent = ''; return; }
+        var parts = eventDateInput.value.split('-').map(Number);
+        var sixBefore = monthsBefore(parts, 6);
+        var threeBefore = monthsBefore(parts, 3);
+        bookingHint.textContent = '6 months before: ' + sixBefore + '   ·   3 months before: ' + threeBefore;
+        if (!existing && !bookingDateInput.dataset.touched) bookingDateInput.value = sixBefore;
+      }
+      eventDateInput.addEventListener('input', refreshBookingHint);
+      bookingDateInput.addEventListener('input', function () { bookingDateInput.dataset.touched = '1'; });
+      refreshBookingHint();
+
+      var daysSelect = document.createElement('select');
+      for (var dayN = 1; dayN <= 10; dayN++) {
+        var dOpt = document.createElement('option');
+        dOpt.value = dayN; dOpt.textContent = dayN + ' day' + (dayN === 1 ? '' : 's');
+        if (existing && Number(existing.days) === dayN) dOpt.selected = true;
+        daysSelect.appendChild(dOpt);
+      }
+      field('Days', daysSelect);
+
+      var backupSelect = document.createElement('select');
+      var noneOpt = document.createElement('option');
+      noneOpt.value = ''; noneOpt.textContent = '(None)';
+      backupSelect.appendChild(noneOpt);
+      campsites.forEach(function (c) {
+        var opt = document.createElement('option');
+        opt.value = c.campsiteId; opt.textContent = c.name;
+        if (existing && existing.backupCampsiteId === c.campsiteId) opt.selected = true;
+        backupSelect.appendChild(opt);
+      });
+      field('Backup campsite (optional)', backupSelect);
+
+      var msg = document.createElement('div');
+      form.appendChild(msg);
+
+      var saveBtn = document.createElement('button');
+      saveBtn.innerHTML = '<span class="btnLabel">Save Event</span>';
+      saveBtn.onclick = function () {
+        msg.textContent = '';
+        if (!nameInput.value.trim() || !eventDateInput.value || !bookingDateInput.value) {
+          msg.textContent = 'Name, event date, and booking date are all required.';
+          msg.className = 'msg error';
+          return;
+        }
+        setButtonLoading(saveBtn, true, 'Saving…');
+        var payload = {
+          Name: nameInput.value.trim(), Visibility: visSelect.value, CampsiteID: campsiteSelect.value,
+          EventDate: eventDateInput.value, BookingDate: bookingDateInput.value, Days: Number(daysSelect.value),
+          BackupCampsiteID: backupSelect.value
+        };
+        if (existing) payload.EventID = existing.eventId;
+        callApi('/api/admin/campingv2/events/save', { token: token, event: payload })
+          .then(function (res) {
+            return callApi('/api/admin/campingv2/events/list', { token: token }).then(function (list) {
+              showAdminCampingEventForm(list.find(function (e) { return e.eventId === res.eventId; }));
+            });
+          })
+          .catch(function (err) { setButtonLoading(saveBtn, false); msg.textContent = err.message; msg.className = 'msg error'; });
+      };
+      form.appendChild(saveBtn);
+      main.appendChild(form);
+
+      if (existing) {
+        renderAdminCampingBackupControl(main, existing, token);
+        var partiesTitle = document.createElement('h2');
+        partiesTitle.className = 'section-title';
+        partiesTitle.textContent = 'Parties';
+        main.appendChild(partiesTitle);
+        var partiesContainer = document.createElement('div');
+        main.appendChild(partiesContainer);
+        loadAdminCampingParties(existing.eventId, partiesContainer);
+      }
+
+      var backBtn = document.createElement('button');
+      backBtn.className = 'actionBtn secondary';
+      backBtn.innerHTML = '<span class="btnLabel">Back to Camping Admin</span>';
+      backBtn.style.marginTop = '20px';
+      backBtn.onclick = function () { showAdminCampingV2Home(); };
+      main.appendChild(backBtn);
+    }
+
+    function renderAdminCampingBackupControl(main, ev, token) {
+      var wrap = document.createElement('div');
+      wrap.className = 'adminBanner';
+      var label = document.createElement('div');
+      label.textContent = ev.backupActive ? 'This event is currently using its BACKUP campsite.' : 'This event is using its primary campsite.';
+      wrap.appendChild(label);
+      var btn = document.createElement('button');
+      btn.className = 'actionBtn' + (ev.backupActive ? ' secondary' : ' danger');
+      btn.style.marginTop = '10px';
+      btn.innerHTML = '<span class="btnLabel">' + (ev.backupActive ? 'Switch Back to Primary Campsite' : 'Switch to Backup Campsite') + '</span>';
+      btn.onclick = function () {
+        var next = !ev.backupActive;
+        if (next && !confirm('Switch this whole event to its backup campsite? Everyone signed up will be asked to confirm their site and status again.')) return;
+        setButtonLoading(btn, true, 'Switching…');
+        callApi('/api/admin/campingv2/events/set-backup', { token: token, eventId: ev.eventId, active: next })
+          .then(function () {
+            return callApi('/api/admin/campingv2/events/list', { token: token }).then(function (list) {
+              showAdminCampingEventForm(list.find(function (e) { return e.eventId === ev.eventId; }));
+            });
+          })
+          .catch(function (err) { setButtonLoading(btn, false); alert(err.message); });
+      };
+      wrap.appendChild(btn);
+      main.appendChild(wrap);
+    }
+
+    function loadAdminCampingParties(eventId, container) {
+      showLoadingRow(container, 'Loading parties…');
+      var token = localStorage.getItem(TOKEN_KEY);
+      Promise.all([
+        callApi('/api/campingv2/module', { token: token, eventId: eventId }),
+        callApi('/api/admin/users/list', { token: token })
+      ])
+        .then(function (results) { renderAdminCampingParties(eventId, results[0].roster, results[1], container); })
+        .catch(function (err) { showErrorIn(container, err); });
+    }
+
+    function renderAdminCampingParties(eventId, roster, users, container) {
+      container.innerHTML = '';
+      var token = localStorage.getItem(TOKEN_KEY);
+
+      function buildUserSelect(selectedEmail) {
+        var sel = document.createElement('select');
+        var noneOpt = document.createElement('option');
+        noneOpt.value = ''; noneOpt.textContent = '(No user linked)';
+        sel.appendChild(noneOpt);
+        users.forEach(function (u) {
+          var opt = document.createElement('option');
+          opt.value = u.email; opt.textContent = u.name + ' (' + u.email + ')';
+          if (u.email === selectedEmail) opt.selected = true;
+          sel.appendChild(opt);
+        });
+        return sel;
+      }
+
+      function buildStatusSelect(selected) {
+        var sel = document.createElement('select');
+        [['Unbooked', 'Unbooked'], ['Booked', 'Booked'], ['NotGoing', 'Not Going']].forEach(function (pair) {
+          var opt = document.createElement('option');
+          opt.value = pair[0]; opt.textContent = pair[1];
+          if (selected === pair[0]) opt.selected = true;
+          sel.appendChild(opt);
+        });
+        return sel;
+      }
+
+      roster.forEach(function (p) {
+        var row = document.createElement('div');
+        row.className = 'partyRow';
+
+        var nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.value = p.partyName;
+        row.appendChild(nameInput);
+
+        var siteInput = document.createElement('input');
+        siteInput.type = 'text';
+        siteInput.placeholder = 'Site';
+        siteInput.value = p.site || '';
+        row.appendChild(siteInput);
+
+        var userSelect = buildUserSelect(p.assignedEmail);
+        row.appendChild(userSelect);
+
+        var statusSelect = buildStatusSelect(p.status);
+        row.appendChild(statusSelect);
+
+        var saveBtn = document.createElement('button');
+        saveBtn.className = 'btn-small';
+        saveBtn.textContent = 'Save';
+        saveBtn.onclick = function () {
+          callApi('/api/admin/campingv2/parties/update', {
+            token: token, partyId: p.partyId, partyName: nameInput.value.trim(),
+            site: siteInput.value.trim(), assignedEmail: userSelect.value, status: statusSelect.value
+          })
+            .then(function () { loadAdminCampingParties(eventId, container); })
+            .catch(function (err) { alert(err.message); });
+        };
+        row.appendChild(saveBtn);
+
+        var removeBtn = document.createElement('button');
+        removeBtn.className = 'btn-small btn-secondary';
+        removeBtn.textContent = 'Remove';
+        removeBtn.onclick = function () {
+          if (!confirm('Remove this party?')) return;
+          callApi('/api/admin/campingv2/parties/remove', { token: token, partyId: p.partyId })
+            .then(function () { loadAdminCampingParties(eventId, container); })
+            .catch(function (err) { alert(err.message); });
+        };
+        row.appendChild(removeBtn);
+
+        container.appendChild(row);
+      });
+
+      var addRow = document.createElement('div');
+      addRow.className = 'partyRow';
+      var addNameInput = document.createElement('input');
+      addNameInput.type = 'text';
+      addNameInput.placeholder = 'Party name';
+      addRow.appendChild(addNameInput);
+      var addSiteInput = document.createElement('input');
+      addSiteInput.type = 'text';
+      addSiteInput.placeholder = 'Site';
+      addRow.appendChild(addSiteInput);
+      var addUserSelect = buildUserSelect('');
+      addRow.appendChild(addUserSelect);
+      var addBtn = document.createElement('button');
+      addBtn.className = 'btn-small';
+      addBtn.textContent = '+ Add Party';
+      addBtn.onclick = function () {
+        if (!addNameInput.value.trim()) { alert('Enter a party name.'); return; }
+        callApi('/api/admin/campingv2/parties/add', {
+          token: token, eventId: eventId, partyName: addNameInput.value.trim(),
+          site: addSiteInput.value.trim(), assignedEmail: addUserSelect.value
+        })
+          .then(function () { loadAdminCampingParties(eventId, container); })
+          .catch(function (err) { alert(err.message); });
+      };
+      addRow.appendChild(addBtn);
+      container.appendChild(addRow);
     }
 
     // ---------- Biggest Loser — entry (nav) ----------
