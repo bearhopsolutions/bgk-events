@@ -474,6 +474,9 @@
       { key: 'admin', label: 'Admin tab' },
       { key: 'blinddate', label: 'Blind Date With a Book' }
     ];
+    // Same modules as above minus 'admin' - that one's an admin capability, not something a
+    // regular user's own nav shows, so there's nothing to hide.
+    var HIDDEN_MODULE_OPTIONS = MODULE_ADMIN_OPTIONS.filter(function (m) { return m.key !== 'admin'; });
     var viewMode = 'user'; // 'user' | 'admin' — only meaningful when currentUser has sudo or any module-admin access
     var currentRoute = { view: 'home' };
 
@@ -651,6 +654,10 @@
       return !!user && (user.isSudoAdmin || (user.moduleAdmins && user.moduleAdmins.indexOf(moduleKey) !== -1));
     }
 
+    function isModuleHiddenFor(user, moduleKey) {
+      return !!(user && user.hiddenModules && user.hiddenModules.indexOf(moduleKey) !== -1);
+    }
+
     function renderAdminSwitch() {
       var wrap = document.getElementById('adminSwitchWrap');
       wrap.innerHTML = '';
@@ -676,7 +683,8 @@
       var nav = document.getElementById('navModules');
       nav.innerHTML = '';
       if (!currentData) return;
-      var showWeightLoss = (viewMode === 'admin' && isModuleAdminFor(currentUser, 'weightloss')) || qualifyingWeightLossEvents(currentData).length > 0;
+      var showWeightLoss = (viewMode === 'admin' && isModuleAdminFor(currentUser, 'weightloss')) ||
+        (!isModuleHiddenFor(currentUser, 'weightloss') && qualifyingWeightLossEvents(currentData).length > 0);
       if (showWeightLoss) {
         var a = document.createElement('a');
         a.className = 'navlink';
@@ -685,7 +693,8 @@
         a.onclick = function () { navigateWeightLoss(); };
         nav.appendChild(a);
       }
-      var showCampingV2 = (viewMode === 'admin' && isModuleAdminFor(currentUser, 'campingv2')) || campingV2Events.length > 0;
+      var showCampingV2 = (viewMode === 'admin' && isModuleAdminFor(currentUser, 'campingv2')) ||
+        (!isModuleHiddenFor(currentUser, 'campingv2') && campingV2Events.length > 0);
       if (showCampingV2) {
         var campA = document.createElement('a');
         campA.className = 'navlink';
@@ -694,7 +703,8 @@
         campA.onclick = function () { navigateCampingV2(); };
         nav.appendChild(campA);
       }
-      var showBlindDate = (viewMode === 'admin' && isModuleAdminFor(currentUser, 'blinddate')) || blindDateEvents.length > 0;
+      var showBlindDate = (viewMode === 'admin' && isModuleAdminFor(currentUser, 'blinddate')) ||
+        (!isModuleHiddenFor(currentUser, 'blinddate') && blindDateEvents.length > 0);
       if (showBlindDate) {
         var bdA = document.createElement('a');
         bdA.className = 'navlink';
@@ -929,27 +939,46 @@
 
     function renderModuleAdminRolesCell(u) {
       var td = document.createElement('td');
-      if (u.isSudoAdmin) {
-        var note = document.createElement('span');
-        note.className = 'desc';
-        note.textContent = 'Sudo — has all modules';
-        td.appendChild(note);
-        return td;
+
+      function checkboxGroup(titleText, options, selectedList) {
+        var group = document.createElement('div');
+        var title = document.createElement('div');
+        title.className = 'desc';
+        title.style.margin = '4px 0 2px';
+        title.textContent = titleText;
+        group.appendChild(title);
+        var checkboxes = {};
+        options.forEach(function (m) {
+          var lbl = document.createElement('label');
+          lbl.style.display = 'block';
+          lbl.style.fontSize = '0.85em';
+          lbl.style.fontWeight = 'normal';
+          var cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.checked = (selectedList || []).indexOf(m.key) !== -1;
+          checkboxes[m.key] = cb;
+          lbl.appendChild(cb);
+          lbl.appendChild(document.createTextNode(' ' + m.label));
+          group.appendChild(lbl);
+        });
+        return { element: group, checkboxes: checkboxes };
       }
-      var checkboxes = {};
-      MODULE_ADMIN_OPTIONS.forEach(function (m) {
-        var lbl = document.createElement('label');
-        lbl.style.display = 'block';
-        lbl.style.fontSize = '0.85em';
-        lbl.style.fontWeight = 'normal';
-        var cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.checked = (u.moduleAdmins || []).indexOf(m.key) !== -1;
-        checkboxes[m.key] = cb;
-        lbl.appendChild(cb);
-        lbl.appendChild(document.createTextNode(' ' + m.label));
-        td.appendChild(lbl);
-      });
+
+      var adminGroup = null;
+      if (u.isSudoAdmin) {
+        var note = document.createElement('div');
+        note.className = 'desc';
+        note.style.margin = '4px 0 2px';
+        note.textContent = 'Sudo — already has every module';
+        td.appendChild(note);
+      } else {
+        adminGroup = checkboxGroup('Module admin for:', MODULE_ADMIN_OPTIONS, u.moduleAdmins);
+        td.appendChild(adminGroup.element);
+      }
+
+      var hiddenGroup = checkboxGroup('Hide from this user:', HIDDEN_MODULE_OPTIONS, u.hiddenModules);
+      td.appendChild(hiddenGroup.element);
+
       var saveBtn = document.createElement('button');
       saveBtn.className = 'actionBtn secondary btn-small';
       saveBtn.style.marginTop = '4px';
@@ -958,13 +987,20 @@
       rolesMsg.className = 'msg';
       saveBtn.onclick = function () {
         var token = localStorage.getItem(TOKEN_KEY);
-        var selected = MODULE_ADMIN_OPTIONS.filter(function (m) { return checkboxes[m.key].checked; }).map(function (m) { return m.key; });
+        var selectedHidden = HIDDEN_MODULE_OPTIONS.filter(function (m) { return hiddenGroup.checkboxes[m.key].checked; }).map(function (m) { return m.key; });
         rolesMsg.textContent = '';
         setButtonLoading(saveBtn, true, 'Saving…');
-        callApi('/api/admin/roles/set', { token: token, email: u.email, moduleAdmins: selected })
+        var calls = [callApi('/api/admin/roles/set-hidden', { token: token, email: u.email, hiddenModules: selectedHidden })];
+        var selectedAdmin = null;
+        if (adminGroup) {
+          selectedAdmin = MODULE_ADMIN_OPTIONS.filter(function (m) { return adminGroup.checkboxes[m.key].checked; }).map(function (m) { return m.key; });
+          calls.push(callApi('/api/admin/roles/set', { token: token, email: u.email, moduleAdmins: selectedAdmin }));
+        }
+        Promise.all(calls)
           .then(function () {
             setButtonLoading(saveBtn, false);
-            u.moduleAdmins = selected;
+            u.hiddenModules = selectedHidden;
+            if (selectedAdmin) u.moduleAdmins = selectedAdmin;
             rolesMsg.textContent = 'Saved.';
             rolesMsg.className = 'msg ok';
           })
@@ -991,18 +1027,22 @@
       var canManageRoles = currentUser && currentUser.isSudoAdmin;
       var table = document.createElement('table');
       table.innerHTML = '<tr><th>Name</th><th>Email</th><th>New PIN</th>' +
-        (canManageRoles ? '<th>Module Admin</th>' : '') + '<th></th></tr>';
+        (canManageRoles ? '<th>Roles &amp; Visibility</th>' : '') + '<th></th></tr>';
       users.forEach(function (u) {
         var tr = document.createElement('tr');
         var rowMsg = document.createElement('div');
         rowMsg.className = 'msg';
 
-        var roleBadge = u.isSudoAdmin ? 'Sudo Admin' : (u.moduleAdmins && u.moduleAdmins.length
-          ? u.moduleAdmins.map(function (key) {
-              var opt = MODULE_ADMIN_OPTIONS.filter(function (o) { return o.key === key; })[0];
-              return opt ? opt.label : key;
-            }).join(', ') + ' admin'
-          : null);
+        function labelsFor(keys, options) {
+          return (keys || []).map(function (key) {
+            var opt = options.filter(function (o) { return o.key === key; })[0];
+            return opt ? opt.label : key;
+          });
+        }
+        var badgeParts = [];
+        badgeParts.push(u.isSudoAdmin ? 'Sudo Admin' : (u.moduleAdmins && u.moduleAdmins.length ? labelsFor(u.moduleAdmins, MODULE_ADMIN_OPTIONS).join(', ') + ' admin' : null));
+        if (u.hiddenModules && u.hiddenModules.length) badgeParts.push('Hidden: ' + labelsFor(u.hiddenModules, HIDDEN_MODULE_OPTIONS).join(', '));
+        var roleBadge = badgeParts.filter(Boolean).join(' · ') || null;
 
         var nameTd = renderEditableCell(u.name, function (newValue) {
           var token = localStorage.getItem(TOKEN_KEY);
