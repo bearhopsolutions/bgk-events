@@ -391,6 +391,15 @@
     .markerEditRow { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
     .markerEditRow input[type=text] { width: 90px; min-height: 36px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--ink); }
 
+    /* Blind Date With a Book */
+    .bdDetailsGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px 20px; font-size: 15px; margin-bottom: 14px; }
+    .bdDetailsGrid .label { color: var(--text-muted); font-size: 13px; text-transform: uppercase; letter-spacing: 0.03em; }
+    .bdQuestionRow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .bdQuestionRow input[type=text] { flex: 1; min-width: 140px; min-height: 40px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--ink); font-size: 15px; }
+    .bdQuestionRow select { min-height: 40px; padding: 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--ink); font-size: 15px; }
+    .bdAddressGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .bdAddressGrid input { min-height: 40px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--ink); font-size: 15px; }
+
     /* Mobile */
     @media (max-width: 640px) {
       main { padding: 18px 14px; }
@@ -458,6 +467,7 @@
     var currentUser = null;
     var currentData = null; // { upcoming, enrolling, active } from /api/events (nav visibility)
     var campingV2Events = []; // from /api/campingv2/events — separate from currentData, Camping (v2) isn't an Events-sheet module
+    var blindDateEvents = []; // from /api/blinddate/events — same reasoning, its own sheets entirely
     var MODULE_ADMIN_OPTIONS = [
       { key: 'weightloss', label: 'Biggest Loser' },
       { key: 'campingv2', label: 'Camping' },
@@ -683,6 +693,15 @@
         campA.onclick = function () { navigateCampingV2(); };
         nav.appendChild(campA);
       }
+      var showBlindDate = (viewMode === 'admin' && isModuleAdminFor(currentUser, 'blinddate')) || blindDateEvents.length > 0;
+      if (showBlindDate) {
+        var bdA = document.createElement('a');
+        bdA.className = 'navlink';
+        bdA.id = 'navBlindDateLink';
+        bdA.textContent = 'Blind Date With a Book';
+        bdA.onclick = function () { navigateBlindDate(); };
+        nav.appendChild(bdA);
+      }
       if (viewMode === 'admin' && isModuleAdminFor(currentUser, 'admin')) {
         var adminLink = document.createElement('a');
         adminLink.className = 'navlink';
@@ -698,15 +717,18 @@
       var homeLink = document.getElementById('navHomeLink');
       var wlLink = document.getElementById('navWeightLossLink');
       var campLink = document.getElementById('navCampingV2Link');
+      var bdLink = document.getElementById('navBlindDateLink');
       var adminLink = document.getElementById('navAdminLink');
       var view = currentRoute && currentRoute.view;
       var section = view === 'home' ? 'home'
         : view === 'admin' ? 'admin'
         : (String(view).indexOf('weightloss') === 0 ? 'weightloss'
-        : (String(view).indexOf('campingv2') === 0 ? 'campingv2' : null));
+        : (String(view).indexOf('campingv2') === 0 ? 'campingv2'
+        : (String(view).indexOf('blinddate') === 0 ? 'blinddate' : null)));
       if (homeLink) homeLink.classList.toggle('navlink-active', section === 'home');
       if (wlLink) wlLink.classList.toggle('navlink-active', section === 'weightloss');
       if (campLink) campLink.classList.toggle('navlink-active', section === 'campingv2');
+      if (bdLink) bdLink.classList.toggle('navlink-active', section === 'blinddate');
       if (adminLink) adminLink.classList.toggle('navlink-active', section === 'admin');
     }
 
@@ -744,11 +766,13 @@
       var token = localStorage.getItem(TOKEN_KEY);
       Promise.all([
         callApi('/api/events', { token: token }),
-        callApi('/api/campingv2/events', { token: token })
+        callApi('/api/campingv2/events', { token: token }),
+        callApi('/api/blinddate/events', { token: token })
       ])
         .then(function (results) {
           currentData = results[0];
           campingV2Events = results[1];
+          blindDateEvents = results[2];
           renderModuleNav();
           navigateHome();
         })
@@ -759,10 +783,12 @@
       var token = localStorage.getItem(TOKEN_KEY);
       return Promise.all([
         callApi('/api/events', { token: token }),
-        callApi('/api/campingv2/events', { token: token })
+        callApi('/api/campingv2/events', { token: token }),
+        callApi('/api/blinddate/events', { token: token })
       ]).then(function (results) {
         currentData = results[0];
         campingV2Events = results[1];
+        blindDateEvents = results[2];
         renderModuleNav();
         if (then) then();
       });
@@ -781,6 +807,11 @@
     function navigateCampingV2() {
       setRoute({ view: 'campingv2' });
       showCampingV2Entry();
+    }
+
+    function navigateBlindDate() {
+      setRoute({ view: 'blinddate' });
+      showBlindDateEntry();
     }
 
     // ---------- Home ----------
@@ -2769,6 +2800,801 @@
       };
       addRow.appendChild(addBtn);
       container.appendChild(addRow);
+    }
+
+    // ---------- Blind Date With a Book ----------
+
+    function showBlindDateEntry() {
+      if (viewMode === 'admin') { showAdminBlindDateHome(); return; }
+      if (blindDateEvents.length === 0) { showBlindDateEmpty(); return; }
+      if (blindDateEvents.length === 1) {
+        setRoute({ view: 'blinddate-module', eventId: blindDateEvents[0].eventId });
+        showBlindDateModule(blindDateEvents[0].eventId);
+        return;
+      }
+      showBlindDatePicker(blindDateEvents);
+    }
+
+    function showBlindDateEmpty() {
+      var main = document.getElementById('mainContent');
+      main.innerHTML = '';
+      var h = document.createElement('h2');
+      h.className = 'section-title';
+      h.textContent = 'Blind Date With a Book';
+      main.appendChild(h);
+      var empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = 'Nothing here right now.';
+      main.appendChild(empty);
+    }
+
+    function showBlindDatePicker(list) {
+      var main = document.getElementById('mainContent');
+      main.innerHTML = '';
+      var h = document.createElement('h2');
+      h.className = 'section-title';
+      h.textContent = 'Blind Date With a Book';
+      main.appendChild(h);
+      var grid = document.createElement('div');
+      grid.className = 'grid';
+      list.forEach(function (ev) {
+        var card = document.createElement('div');
+        card.className = 'eventCard';
+        var h3 = document.createElement('h3');
+        h3.textContent = ev.name;
+        card.appendChild(h3);
+        if (ev.isSignedUp) {
+          var p = document.createElement('div');
+          p.className = 'desc';
+          p.textContent = "You're signed up";
+          card.appendChild(p);
+        }
+        var btn = document.createElement('button');
+        btn.textContent = 'View';
+        btn.onclick = function () {
+          setRoute({ view: 'blinddate-module', eventId: ev.eventId });
+          showBlindDateModule(ev.eventId);
+        };
+        card.appendChild(btn);
+        grid.appendChild(card);
+      });
+      main.appendChild(grid);
+    }
+
+    function showBlindDateModule(eventId) {
+      var main = document.getElementById('mainContent');
+      showLoadingRow(main, 'Loading…');
+      var token = localStorage.getItem(TOKEN_KEY);
+      callApi('/api/blinddate/module', { token: token, eventId: eventId })
+        .then(function (data) { renderBlindDateModule(data); })
+        .catch(function (err) { showErrorIn(main, err); });
+    }
+
+    // Builds the dynamic question form shared by signup and answer-editing. Returns the DOM
+    // element plus a collect() that reads current input values back into an answers object keyed
+    // by question id, matching what the backend expects.
+    function buildBlindDateAnswerForm(questions, existingAnswers) {
+      var wrap = document.createElement('div');
+      var getters = {};
+      (questions || []).forEach(function (q) {
+        if (q.type === 'shippingAddress') {
+          var label = document.createElement('label');
+          label.textContent = q.label;
+          wrap.appendChild(label);
+          var grid = document.createElement('div');
+          grid.className = 'bdAddressGrid';
+          var existingAddr = (existingAnswers && existingAnswers[q.id]) || {};
+          var streetInput = document.createElement('input');
+          streetInput.type = 'text'; streetInput.placeholder = 'Street address'; streetInput.value = existingAddr.street || '';
+          streetInput.style.gridColumn = '1 / -1';
+          var cityInput = document.createElement('input');
+          cityInput.type = 'text'; cityInput.placeholder = 'City'; cityInput.value = existingAddr.city || '';
+          var stateInput = document.createElement('input');
+          stateInput.type = 'text'; stateInput.placeholder = 'State'; stateInput.value = existingAddr.state || '';
+          var zipInput = document.createElement('input');
+          zipInput.type = 'text'; zipInput.placeholder = 'ZIP'; zipInput.value = existingAddr.zip || '';
+          [streetInput, cityInput, stateInput, zipInput].forEach(function (i) { grid.appendChild(i); });
+          wrap.appendChild(grid);
+          getters[q.id] = function () {
+            return { street: streetInput.value.trim(), city: cityInput.value.trim(), state: stateInput.value.trim(), zip: zipInput.value.trim() };
+          };
+        } else {
+          var lbl = document.createElement('label');
+          lbl.textContent = q.label;
+          wrap.appendChild(lbl);
+          var input = document.createElement('input');
+          input.type = 'text';
+          input.value = (existingAnswers && existingAnswers[q.id]) || '';
+          wrap.appendChild(input);
+          getters[q.id] = function () { return input.value.trim(); };
+        }
+      });
+      return {
+        element: wrap,
+        collect: function () {
+          var out = {};
+          (questions || []).forEach(function (q) { out[q.id] = getters[q.id](); });
+          return out;
+        }
+      };
+    }
+
+    function detailRow(grid, label, value) {
+      var d = document.createElement('div');
+      var l = document.createElement('div'); l.className = 'label'; l.textContent = label;
+      var v = document.createElement('div'); v.textContent = value || '—';
+      d.appendChild(l); d.appendChild(v);
+      grid.appendChild(d);
+    }
+
+    function renderBlindDateAnswersReadonly(questions, answers) {
+      var grid = document.createElement('div');
+      grid.className = 'bdDetailsGrid';
+      (questions || []).forEach(function (q) {
+        if (q.type === 'shippingAddress') {
+          var addr = (answers && answers[q.id]) || {};
+          detailRow(grid, q.label, [addr.street, [addr.city, addr.state].filter(Boolean).join(', ') + ' ' + (addr.zip || '')].filter(Boolean).join(', ').trim());
+        } else {
+          detailRow(grid, q.label, answers ? answers[q.id] : '');
+        }
+      });
+      return grid;
+    }
+
+    function renderBlindDateSignupForm(data) {
+      var wrap = document.createElement('div');
+      wrap.className = 'card';
+      wrap.style.width = 'auto';
+      wrap.style.maxWidth = '460px';
+
+      var h3 = document.createElement('h3');
+      h3.textContent = 'Sign Up';
+      wrap.appendChild(h3);
+
+      var form = buildBlindDateAnswerForm(data.questions, null);
+      wrap.appendChild(form.element);
+
+      var msg = document.createElement('div');
+      wrap.appendChild(msg);
+
+      var submitBtn = document.createElement('button');
+      submitBtn.innerHTML = '<span class="btnLabel">Sign Up</span>';
+      submitBtn.onclick = function () {
+        msg.textContent = '';
+        setButtonLoading(submitBtn, true, 'Saving…');
+        var token = localStorage.getItem(TOKEN_KEY);
+        callApi('/api/blinddate/signup', { token: token, eventId: data.eventId, answers: form.collect() })
+          .then(function (res) {
+            if (res.addressWarning) alert(res.addressWarning);
+            showBlindDateModule(data.eventId);
+          })
+          .catch(function (err) { setButtonLoading(submitBtn, false); msg.textContent = err.message; msg.className = 'msg error'; });
+      };
+      wrap.appendChild(submitBtn);
+      return wrap;
+    }
+
+    function renderBlindDateMyAnswers(data) {
+      var wrap = document.createElement('div');
+      wrap.className = 'card';
+      wrap.style.width = 'auto';
+      wrap.style.maxWidth = '460px';
+
+      var h3 = document.createElement('h3');
+      h3.textContent = "You're Signed Up";
+      wrap.appendChild(h3);
+
+      var form = buildBlindDateAnswerForm(data.questions, data.myAnswers);
+      wrap.appendChild(form.element);
+
+      var msg = document.createElement('div');
+      wrap.appendChild(msg);
+      var saveBtn = document.createElement('button');
+      saveBtn.innerHTML = '<span class="btnLabel">Save Answers</span>';
+      saveBtn.onclick = function () {
+        msg.textContent = '';
+        setButtonLoading(saveBtn, true, 'Saving…');
+        var token = localStorage.getItem(TOKEN_KEY);
+        callApi('/api/blinddate/answers', { token: token, eventId: data.eventId, answers: form.collect() })
+          .then(function (res) {
+            setButtonLoading(saveBtn, false);
+            if (res.addressWarning) alert(res.addressWarning);
+            msg.textContent = 'Saved.';
+            msg.className = 'msg ok';
+          })
+          .catch(function (err) { setButtonLoading(saveBtn, false); msg.textContent = err.message; msg.className = 'msg error'; });
+      };
+      wrap.appendChild(saveBtn);
+      return wrap;
+    }
+
+    function renderBlindDateRoster(roster) {
+      var wrap = document.createElement('div');
+      var h2 = document.createElement('h2');
+      h2.className = 'section-title';
+      h2.textContent = "Who's Signed Up";
+      wrap.appendChild(h2);
+      if (!roster || !roster.length) {
+        var empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'No one has signed up yet.';
+        wrap.appendChild(empty);
+        return wrap;
+      }
+      var ul = document.createElement('ul');
+      roster.forEach(function (n) {
+        var li = document.createElement('li');
+        li.textContent = n;
+        ul.appendChild(li);
+      });
+      wrap.appendChild(ul);
+      return wrap;
+    }
+
+    function renderBlindDateDrawnView(data) {
+      var wrap = document.createElement('div');
+
+      if (data.noAssignment) {
+        var note = document.createElement('div');
+        note.className = 'empty';
+        note.textContent = "The draw has happened, but you weren't signed up in time, so you don't have an assignment.";
+        wrap.appendChild(note);
+        return wrap;
+      }
+
+      var card = document.createElement('div');
+      card.className = 'card';
+      card.style.width = 'auto';
+      card.style.maxWidth = '460px';
+
+      var h3 = document.createElement('h3');
+      h3.textContent = "You're buying for: " + data.receiverName;
+      card.appendChild(h3);
+
+      card.appendChild(renderBlindDateAnswersReadonly(data.questions, data.receiverAnswers));
+
+      var mailedLabel = document.createElement('div');
+      mailedLabel.className = 'desc';
+      mailedLabel.textContent = 'Have you mailed their package?';
+      card.appendChild(mailedLabel);
+
+      var pillRow = document.createElement('div');
+      pillRow.style.display = 'flex';
+      pillRow.style.gap = '8px';
+      pillRow.style.margin = '8px 0';
+      var mailedState = data.myMailed;
+      var notMailedBtn = document.createElement('button');
+      notMailedBtn.className = 'pillBtn' + (!mailedState ? ' active' : '');
+      notMailedBtn.textContent = 'Not Mailed Yet';
+      var mailedBtn = document.createElement('button');
+      mailedBtn.className = 'pillBtn' + (mailedState ? ' active' : '');
+      mailedBtn.textContent = 'Mailed';
+      pillRow.appendChild(notMailedBtn);
+      pillRow.appendChild(mailedBtn);
+      card.appendChild(pillRow);
+
+      var trackingInput = document.createElement('input');
+      trackingInput.type = 'text';
+      trackingInput.placeholder = 'Tracking # (optional)';
+      trackingInput.value = data.myTrackingNumber || '';
+      trackingInput.style.marginTop = '8px';
+      if (!mailedState) trackingInput.classList.add('hidden');
+      card.appendChild(trackingInput);
+
+      notMailedBtn.onclick = function () {
+        mailedState = false;
+        notMailedBtn.classList.add('active'); mailedBtn.classList.remove('active');
+        trackingInput.classList.add('hidden');
+      };
+      mailedBtn.onclick = function () {
+        mailedState = true;
+        mailedBtn.classList.add('active'); notMailedBtn.classList.remove('active');
+        trackingInput.classList.remove('hidden');
+      };
+
+      var msg = document.createElement('div');
+      card.appendChild(msg);
+      var saveBtn = document.createElement('button');
+      saveBtn.innerHTML = '<span class="btnLabel">Save</span>';
+      saveBtn.onclick = function () {
+        msg.textContent = '';
+        setButtonLoading(saveBtn, true, 'Saving…');
+        var token = localStorage.getItem(TOKEN_KEY);
+        callApi('/api/blinddate/mailed', { token: token, eventId: data.eventId, mailed: mailedState, trackingNumber: trackingInput.value.trim() })
+          .then(function () { setButtonLoading(saveBtn, false); msg.textContent = 'Saved.'; msg.className = 'msg ok'; })
+          .catch(function (err) { setButtonLoading(saveBtn, false); msg.textContent = err.message; msg.className = 'msg error'; });
+      };
+      card.appendChild(saveBtn);
+
+      wrap.appendChild(card);
+      return wrap;
+    }
+
+    function renderBlindDateModule(data) {
+      var main = document.getElementById('mainContent');
+      main.innerHTML = '';
+
+      var h = document.createElement('h2');
+      h.className = 'section-title';
+      h.textContent = 'Blind Date With a Book';
+      main.appendChild(h);
+
+      var titleH3 = document.createElement('h3');
+      titleH3.textContent = data.name;
+      main.appendChild(titleH3);
+
+      var meta = document.createElement('div');
+      meta.className = 'desc';
+      meta.textContent = 'Signup: ' + data.signupStartDate + ' to ' + data.signupEndDate +
+        ' · Draw: ' + data.drawDate + ' · Packages in mail by: ' + data.mailByDate;
+      main.appendChild(meta);
+
+      if (data.drawCompleted) {
+        main.appendChild(renderBlindDateDrawnView(data));
+        return;
+      }
+
+      if (data.isSignedUp) {
+        main.appendChild(renderBlindDateMyAnswers(data));
+        main.appendChild(renderBlindDateRoster(data.roster));
+      } else if (data.signupOpen) {
+        main.appendChild(renderBlindDateSignupForm(data));
+      } else {
+        var closed = document.createElement('div');
+        closed.className = 'empty';
+        closed.textContent = 'Signup is not currently open for this event.';
+        main.appendChild(closed);
+      }
+    }
+
+    // ---------- Blind Date With a Book — admin ----------
+
+    var blindDateAdminTab = 'events'; // 'events' | 'restrictions'
+
+    function showAdminBlindDateHome() {
+      var main = document.getElementById('mainContent');
+      main.innerHTML = '';
+
+      var h = document.createElement('h2');
+      h.className = 'section-title';
+      h.textContent = 'Blind Date With a Book';
+      main.appendChild(h);
+
+      var banner = document.createElement('div');
+      banner.className = 'adminBanner';
+      banner.textContent = 'Admin View — manage events and restrictions below.';
+      main.appendChild(banner);
+
+      var tabRow = document.createElement('div');
+      tabRow.style.marginBottom = '16px';
+      var eventsTabBtn = document.createElement('button');
+      eventsTabBtn.className = 'pillBtn' + (blindDateAdminTab === 'events' ? ' active' : '');
+      eventsTabBtn.textContent = 'Events';
+      eventsTabBtn.onclick = function () { blindDateAdminTab = 'events'; showAdminBlindDateHome(); };
+      tabRow.appendChild(eventsTabBtn);
+      var restrictionsTabBtn = document.createElement('button');
+      restrictionsTabBtn.className = 'pillBtn' + (blindDateAdminTab === 'restrictions' ? ' active' : '');
+      restrictionsTabBtn.textContent = 'Restrictions';
+      restrictionsTabBtn.onclick = function () { blindDateAdminTab = 'restrictions'; showAdminBlindDateHome(); };
+      tabRow.appendChild(restrictionsTabBtn);
+      main.appendChild(tabRow);
+
+      if (blindDateAdminTab === 'restrictions') {
+        var restrictionsContainer = document.createElement('div');
+        main.appendChild(restrictionsContainer);
+        loadAdminBlindDateExclusions(restrictionsContainer);
+      } else {
+        var addEventBtn = document.createElement('button');
+        addEventBtn.className = 'actionBtn';
+        addEventBtn.innerHTML = '<span class="btnLabel">+ Create Event</span>';
+        addEventBtn.onclick = function () { showAdminBlindDateEventForm(null); };
+        main.appendChild(addEventBtn);
+        var eventsContainer = document.createElement('div');
+        eventsContainer.style.marginTop = '14px';
+        main.appendChild(eventsContainer);
+        loadAdminBlindDateEvents(eventsContainer);
+      }
+    }
+
+    function loadAdminBlindDateEvents(container) {
+      showLoadingRow(container, 'Loading events…');
+      var token = localStorage.getItem(TOKEN_KEY);
+      callApi('/api/admin/blinddate/events/list', { token: token })
+        .then(function (list) { renderAdminBlindDateEventList(list, container); })
+        .catch(function (err) { showErrorIn(container, err); });
+    }
+
+    function renderAdminBlindDateEventList(list, container) {
+      container.innerHTML = '';
+      if (!list.length) {
+        var empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'No events yet.';
+        container.appendChild(empty);
+        return;
+      }
+      var grid = document.createElement('div');
+      grid.className = 'grid';
+      list.slice().reverse().forEach(function (ev) {
+        var card = document.createElement('div');
+        card.className = 'eventCard';
+        var h3 = document.createElement('h3');
+        h3.textContent = ev.name;
+        card.appendChild(h3);
+        var desc = document.createElement('div');
+        desc.className = 'desc';
+        desc.textContent = 'Signup ' + ev.signupStartDate + '–' + ev.signupEndDate + ' · Draw ' + ev.drawDate + (ev.drawCompleted ? ' (drawn)' : '');
+        card.appendChild(desc);
+        var btn = document.createElement('button');
+        btn.textContent = 'Edit';
+        btn.onclick = function () { showAdminBlindDateEventForm(ev); };
+        card.appendChild(btn);
+        var delBtn = document.createElement('button');
+        delBtn.textContent = 'Delete';
+        delBtn.style.background = 'var(--err)';
+        delBtn.style.marginLeft = '8px';
+        delBtn.onclick = function () {
+          if (!confirm('Delete event "' + ev.name + '" and all its signups/assignments? This cannot be undone.')) return;
+          var token = localStorage.getItem(TOKEN_KEY);
+          callApi('/api/admin/blinddate/events/delete', { token: token, eventId: ev.eventId })
+            .then(function () { return refreshNavData(); })
+            .then(function () { loadAdminBlindDateEvents(container); })
+            .catch(function (err) { alert(err.message); });
+        };
+        card.appendChild(delBtn);
+        grid.appendChild(card);
+      });
+      container.appendChild(grid);
+    }
+
+    function defaultBlindDateDates() {
+      var now = new Date();
+      var year = now.getFullYear();
+      var may1 = new Date(year, 4, 1);
+      if (now > may1) year += 1; // this year's window already passed — default to next year's
+      function key(y, m, d) { return y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0'); }
+      return {
+        signupStartDate: key(year, 5, 1),
+        signupEndDate: key(year, 5, 31),
+        drawDate: key(year, 6, 1),
+        mailByDate: key(year, 7, 1)
+      };
+    }
+
+    function showAdminBlindDateEventForm(existing) {
+      renderAdminBlindDateEventForm(existing);
+    }
+
+    function renderAdminBlindDateEventForm(existing) {
+      var main = document.getElementById('mainContent');
+      main.innerHTML = '';
+      var token = localStorage.getItem(TOKEN_KEY);
+      var defaults = defaultBlindDateDates();
+
+      var h = document.createElement('h2');
+      h.className = 'section-title';
+      h.textContent = existing ? 'Edit Event' : 'Create Event';
+      main.appendChild(h);
+
+      var form = document.createElement('div');
+      form.className = 'card';
+      form.style.width = 'auto';
+      form.style.maxWidth = '460px';
+
+      function field(labelText, input) {
+        var label = document.createElement('label');
+        label.textContent = labelText;
+        form.appendChild(label);
+        form.appendChild(input);
+      }
+
+      var nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.value = existing ? existing.name : '';
+      field('Event name', nameInput);
+
+      var visSelect = document.createElement('select');
+      ['All', 'Hidden'].forEach(function (v) {
+        var opt = document.createElement('option');
+        opt.value = v; opt.textContent = v === 'All' ? 'Visible to everyone' : 'Hidden';
+        if (existing && existing.visibility === v) opt.selected = true;
+        visSelect.appendChild(opt);
+      });
+      field('Visibility', visSelect);
+
+      var signupStartInput = document.createElement('input');
+      signupStartInput.type = 'date';
+      signupStartInput.value = existing ? existing.signupStartDate : defaults.signupStartDate;
+      field('Signup start date', signupStartInput);
+
+      var signupEndInput = document.createElement('input');
+      signupEndInput.type = 'date';
+      signupEndInput.value = existing ? existing.signupEndDate : defaults.signupEndDate;
+      field('Signup end date', signupEndInput);
+
+      var drawDateInput = document.createElement('input');
+      drawDateInput.type = 'date';
+      drawDateInput.value = existing ? existing.drawDate : defaults.drawDate;
+      field('Date of draw', drawDateInput);
+
+      var mailByInput = document.createElement('input');
+      mailByInput.type = 'date';
+      mailByInput.value = existing ? existing.mailByDate : defaults.mailByDate;
+      field('Packages in mail by', mailByInput);
+
+      var questionsLabel = document.createElement('label');
+      questionsLabel.textContent = 'Questions';
+      form.appendChild(questionsLabel);
+
+      var fixedRow = document.createElement('div');
+      fixedRow.className = 'bdQuestionRow';
+      var fixedText = document.createElement('div');
+      fixedText.className = 'desc';
+      fixedText.textContent = 'Shipping Address (required, always included)';
+      fixedRow.appendChild(fixedText);
+      form.appendChild(fixedRow);
+
+      var questionsContainer = document.createElement('div');
+      form.appendChild(questionsContainer);
+
+      var customQuestions = existing
+        ? existing.questions.filter(function (q) { return q.type !== 'shippingAddress'; }).map(function (q) { return { id: q.id, label: q.label }; })
+        : [];
+
+      function renderQuestionRows() {
+        questionsContainer.innerHTML = '';
+        customQuestions.forEach(function (q, idx) {
+          var row = document.createElement('div');
+          row.className = 'bdQuestionRow';
+          var input = document.createElement('input');
+          input.type = 'text';
+          input.placeholder = 'Question';
+          input.value = q.label;
+          input.oninput = function () { q.label = input.value; };
+          row.appendChild(input);
+          var removeBtn = document.createElement('button');
+          removeBtn.className = 'btn-small btn-secondary';
+          removeBtn.textContent = 'Remove';
+          removeBtn.onclick = function () { customQuestions.splice(idx, 1); renderQuestionRows(); };
+          row.appendChild(removeBtn);
+          questionsContainer.appendChild(row);
+        });
+      }
+      renderQuestionRows();
+
+      var addQBtn = document.createElement('button');
+      addQBtn.className = 'btn-small';
+      addQBtn.textContent = '+ Add Question';
+      addQBtn.onclick = function () { customQuestions.push({ label: '' }); renderQuestionRows(); };
+      form.appendChild(addQBtn);
+
+      var msg = document.createElement('div');
+      form.appendChild(msg);
+
+      var saveBtn = document.createElement('button');
+      saveBtn.innerHTML = '<span class="btnLabel">Save Event</span>';
+      saveBtn.style.marginTop = '12px';
+      saveBtn.onclick = function () {
+        msg.textContent = '';
+        if (!nameInput.value.trim() || !signupStartInput.value || !signupEndInput.value || !drawDateInput.value || !mailByInput.value) {
+          msg.textContent = 'Fill in the name and all four dates.';
+          msg.className = 'msg error';
+          return;
+        }
+        setButtonLoading(saveBtn, true, 'Saving…');
+        var payload = {
+          name: nameInput.value.trim(), visibility: visSelect.value,
+          signupStartDate: signupStartInput.value, signupEndDate: signupEndInput.value,
+          drawDate: drawDateInput.value, mailByDate: mailByInput.value,
+          questions: customQuestions.filter(function (q) { return q.label.trim(); })
+        };
+        if (existing) payload.eventId = existing.eventId;
+        callApi('/api/admin/blinddate/events/save', { token: token, event: payload })
+          .then(function (res) {
+            return refreshNavData().then(function () {
+              return callApi('/api/admin/blinddate/events/list', { token: token }).then(function (list) {
+                showAdminBlindDateEventForm(list.find(function (e) { return e.eventId === res.eventId; }));
+              });
+            });
+          })
+          .catch(function (err) { setButtonLoading(saveBtn, false); msg.textContent = err.message; msg.className = 'msg error'; });
+      };
+      form.appendChild(saveBtn);
+      main.appendChild(form);
+
+      if (existing) {
+        var todayKey = new Date().toISOString().slice(0, 10);
+        if (!existing.drawCompleted && todayKey >= existing.drawDate) {
+          var runDrawBtn = document.createElement('button');
+          runDrawBtn.className = 'actionBtn';
+          runDrawBtn.innerHTML = '<span class="btnLabel">Run Draw Now</span>';
+          runDrawBtn.style.marginTop = '20px';
+          runDrawBtn.style.marginRight = '10px';
+          runDrawBtn.onclick = function () {
+            if (!confirm('Run the draw for "' + existing.name + '" now? This locks in assignments and cannot be undone.')) return;
+            setButtonLoading(runDrawBtn, true, 'Drawing…');
+            callApi('/api/admin/blinddate/events/run-draw', { token: token, eventId: existing.eventId })
+              .then(function () {
+                return callApi('/api/admin/blinddate/events/list', { token: token }).then(function (list) {
+                  showAdminBlindDateEventForm(list.find(function (e) { return e.eventId === existing.eventId; }));
+                });
+              })
+              .catch(function (err) { setButtonLoading(runDrawBtn, false); alert(err.message); });
+          };
+          main.appendChild(runDrawBtn);
+        }
+
+        if (existing.drawCompleted) {
+          var assignmentsTitle = document.createElement('h2');
+          assignmentsTitle.className = 'section-title';
+          assignmentsTitle.textContent = 'Assignments';
+          main.appendChild(assignmentsTitle);
+          var assignmentsContainer = document.createElement('div');
+          main.appendChild(assignmentsContainer);
+          loadAdminBlindDateAssignments(existing.eventId, assignmentsContainer);
+        } else {
+          var signupsTitle = document.createElement('h2');
+          signupsTitle.className = 'section-title';
+          signupsTitle.textContent = 'Signups';
+          main.appendChild(signupsTitle);
+          var signupsContainer = document.createElement('div');
+          main.appendChild(signupsContainer);
+          loadAdminBlindDateSignups(existing.eventId, signupsContainer);
+        }
+
+        var deleteEventBtn = document.createElement('button');
+        deleteEventBtn.className = 'actionBtn danger';
+        deleteEventBtn.innerHTML = '<span class="btnLabel">Delete Event</span>';
+        deleteEventBtn.style.marginTop = '20px';
+        deleteEventBtn.style.marginRight = '10px';
+        deleteEventBtn.onclick = function () {
+          if (!confirm('Delete event "' + existing.name + '" and all its signups/assignments? This cannot be undone.')) return;
+          setButtonLoading(deleteEventBtn, true, 'Deleting…');
+          callApi('/api/admin/blinddate/events/delete', { token: token, eventId: existing.eventId })
+            .then(function () { return refreshNavData(); })
+            .then(function () { showAdminBlindDateHome(); })
+            .catch(function (err) { setButtonLoading(deleteEventBtn, false); alert(err.message); });
+        };
+        main.appendChild(deleteEventBtn);
+      }
+
+      var backBtn = document.createElement('button');
+      backBtn.className = 'actionBtn secondary';
+      backBtn.innerHTML = '<span class="btnLabel">Back to Blind Date Admin</span>';
+      backBtn.style.marginTop = '20px';
+      backBtn.onclick = function () { showAdminBlindDateHome(); };
+      main.appendChild(backBtn);
+    }
+
+    function loadAdminBlindDateSignups(eventId, container) {
+      showLoadingRow(container, 'Loading signups…');
+      var token = localStorage.getItem(TOKEN_KEY);
+      callApi('/api/admin/blinddate/events/signups', { token: token, eventId: eventId })
+        .then(function (list) { renderAdminBlindDateSignups(list, container); })
+        .catch(function (err) { showErrorIn(container, err); });
+    }
+
+    function renderAdminBlindDateSignups(list, container) {
+      container.innerHTML = '';
+      if (!list.length) {
+        var empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'No signups yet.';
+        container.appendChild(empty);
+        return;
+      }
+      var table = document.createElement('table');
+      table.innerHTML = '<tr><th>Name</th><th>Email</th><th>Address</th></tr>';
+      list.forEach(function (s) {
+        var tr = document.createElement('tr');
+        var nameTd = document.createElement('td'); nameTd.textContent = s.name; tr.appendChild(nameTd);
+        var emailTd = document.createElement('td'); emailTd.textContent = s.email; tr.appendChild(emailTd);
+        var addr = s.answers.shippingAddress || {};
+        var addrTd = document.createElement('td');
+        addrTd.textContent = [addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(', ') + (addr.validated === false ? ' (unverified)' : '');
+        tr.appendChild(addrTd);
+        table.appendChild(tr);
+      });
+      container.appendChild(wrapTable(table));
+    }
+
+    function loadAdminBlindDateAssignments(eventId, container) {
+      showLoadingRow(container, 'Loading assignments…');
+      var token = localStorage.getItem(TOKEN_KEY);
+      callApi('/api/admin/blinddate/events/assignments', { token: token, eventId: eventId })
+        .then(function (list) { renderAdminBlindDateAssignments(list, container); })
+        .catch(function (err) { showErrorIn(container, err); });
+    }
+
+    function renderAdminBlindDateAssignments(list, container) {
+      container.innerHTML = '';
+      if (!list.length) {
+        var empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'No assignments yet.';
+        container.appendChild(empty);
+        return;
+      }
+      var table = document.createElement('table');
+      table.innerHTML = '<tr><th>Giver</th><th>Receiver</th><th>Mailed</th><th>Tracking #</th></tr>';
+      list.forEach(function (a) {
+        var tr = document.createElement('tr');
+        var giverTd = document.createElement('td'); giverTd.textContent = a.giverName; tr.appendChild(giverTd);
+        var receiverTd = document.createElement('td'); receiverTd.textContent = a.receiverName; tr.appendChild(receiverTd);
+        var mailedTd = document.createElement('td'); mailedTd.textContent = a.mailed ? 'Yes' : 'No'; tr.appendChild(mailedTd);
+        var trackingTd = document.createElement('td'); trackingTd.textContent = a.trackingNumber || '—'; tr.appendChild(trackingTd);
+        table.appendChild(tr);
+      });
+      container.appendChild(wrapTable(table));
+    }
+
+    function loadAdminBlindDateExclusions(container) {
+      showLoadingRow(container, 'Loading restrictions…');
+      var token = localStorage.getItem(TOKEN_KEY);
+      Promise.all([
+        callApi('/api/admin/blinddate/exclusions/list', { token: token }),
+        callApi('/api/admin/blinddate/users', { token: token })
+      ])
+        .then(function (results) { renderAdminBlindDateExclusions(results[0], results[1], container); })
+        .catch(function (err) { showErrorIn(container, err); });
+    }
+
+    function renderAdminBlindDateExclusions(list, users, container) {
+      container.innerHTML = '';
+      var token = localStorage.getItem(TOKEN_KEY);
+
+      list.forEach(function (ex) {
+        var row = document.createElement('div');
+        row.className = 'bdQuestionRow';
+        var text = document.createElement('div');
+        text.textContent = ex.nameA + ' ↔ ' + ex.nameB + (ex.note ? ' (' + ex.note + ')' : '');
+        row.appendChild(text);
+        var removeBtn = document.createElement('button');
+        removeBtn.className = 'btn-small btn-secondary';
+        removeBtn.textContent = 'Remove';
+        removeBtn.onclick = function () {
+          if (!confirm('Remove this restriction?')) return;
+          callApi('/api/admin/blinddate/exclusions/remove', { token: token, exclusionId: ex.exclusionId })
+            .then(function () { loadAdminBlindDateExclusions(container); })
+            .catch(function (err) { alert(err.message); });
+        };
+        row.appendChild(removeBtn);
+        container.appendChild(row);
+      });
+
+      var addRow = document.createElement('div');
+      addRow.className = 'bdQuestionRow';
+      function buildUserSelect() {
+        var sel = document.createElement('select');
+        users.forEach(function (u) {
+          var opt = document.createElement('option');
+          opt.value = u.email; opt.textContent = u.name + ' (' + u.email + ')';
+          sel.appendChild(opt);
+        });
+        return sel;
+      }
+      var selectA = buildUserSelect();
+      var selectB = buildUserSelect();
+      addRow.appendChild(selectA);
+      addRow.appendChild(document.createTextNode(' ↔ '));
+      addRow.appendChild(selectB);
+      var noteInput = document.createElement('input');
+      noteInput.type = 'text';
+      noteInput.placeholder = 'Note (optional)';
+      addRow.appendChild(noteInput);
+      var addBtn = document.createElement('button');
+      addBtn.className = 'btn-small';
+      addBtn.textContent = '+ Add Restriction';
+      container.appendChild(addRow);
+      var addMsg = document.createElement('div');
+      addBtn.onclick = function () {
+        addMsg.textContent = '';
+        callApi('/api/admin/blinddate/exclusions/add', { token: token, emailA: selectA.value, emailB: selectB.value, note: noteInput.value.trim() })
+          .then(function () { loadAdminBlindDateExclusions(container); })
+          .catch(function (err) { addMsg.textContent = err.message; addMsg.className = 'msg error'; });
+      };
+      addRow.appendChild(addBtn);
+      container.appendChild(addMsg);
     }
 
     // ---------- Biggest Loser — entry (nav) ----------
