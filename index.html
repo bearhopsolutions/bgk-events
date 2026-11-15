@@ -1657,22 +1657,57 @@
       showCampingV2Picker(campingV2Events);
     }
 
+    function fetchCampingV2Content() {
+      var token = localStorage.getItem(TOKEN_KEY);
+      return callApi('/api/campingv2/content', { token: token }).then(function (res) { return res.contentHtml || ''; });
+    }
+
+    function renderCampingV2Banner(main, contentHtml) {
+      if (viewMode === 'admin') {
+        var banner = document.createElement('div');
+        banner.className = 'adminBanner';
+        banner.textContent = 'Admin View — edit the message below. Everyone sees it above Camping.';
+        main.appendChild(banner);
+        main.appendChild(renderContentEditor(contentHtml || '', '/api/admin/campingv2/content/save'));
+      } else if (contentHtml && contentHtml.trim()) {
+        var content = document.createElement('div');
+        content.className = 'homeContent';
+        content.innerHTML = contentHtml;
+        main.appendChild(content);
+      }
+    }
+
     function showCampingV2Empty() {
       var main = document.getElementById('mainContent');
-      main.innerHTML = '';
-      var h = document.createElement('h2');
-      h.className = 'section-title';
-      h.textContent = 'Camping';
-      main.appendChild(h);
-      var empty = document.createElement('div');
-      empty.className = 'empty';
-      empty.textContent = 'Nothing here right now.';
-      main.appendChild(empty);
+      showLoadingRow(main, 'Loading…');
+      fetchCampingV2Content()
+        .then(function (contentHtml) {
+          main.innerHTML = '';
+          renderCampingV2Banner(main, contentHtml);
+          var h = document.createElement('h2');
+          h.className = 'section-title';
+          h.textContent = 'Camping';
+          main.appendChild(h);
+          var empty = document.createElement('div');
+          empty.className = 'empty';
+          empty.textContent = 'Nothing here right now.';
+          main.appendChild(empty);
+        })
+        .catch(function (err) { showErrorIn(main, err); });
     }
 
     function showCampingV2Picker(list) {
       var main = document.getElementById('mainContent');
+      showLoadingRow(main, 'Loading…');
+      fetchCampingV2Content()
+        .then(function (contentHtml) { renderCampingV2Picker(list, contentHtml); })
+        .catch(function (err) { showErrorIn(main, err); });
+    }
+
+    function renderCampingV2Picker(list, contentHtml) {
+      var main = document.getElementById('mainContent');
       main.innerHTML = '';
+      renderCampingV2Banner(main, contentHtml);
       var h = document.createElement('h2');
       h.className = 'section-title';
       h.textContent = 'Camping';
@@ -1708,8 +1743,11 @@
       var main = document.getElementById('mainContent');
       showLoadingRow(main, 'Loading…');
       var token = localStorage.getItem(TOKEN_KEY);
-      callApi('/api/campingv2/module', { token: token, eventId: eventId })
-        .then(function (data) { renderCampingV2Module(data); })
+      Promise.all([
+        callApi('/api/campingv2/module', { token: token, eventId: eventId }),
+        fetchCampingV2Content()
+      ])
+        .then(function (results) { renderCampingV2Module(results[0], results[1]); })
         .catch(function (err) { showErrorIn(main, err); });
     }
 
@@ -1972,9 +2010,10 @@
       showOverlay(content);
     }
 
-    function renderCampingV2Module(data) {
+    function renderCampingV2Module(data, contentHtml) {
       var main = document.getElementById('mainContent');
       main.innerHTML = '';
+      renderCampingV2Banner(main, contentHtml);
 
       var h = document.createElement('h2');
       h.className = 'section-title';
@@ -2024,7 +2063,16 @@
 
     function showAdminCampingV2Home() {
       var main = document.getElementById('mainContent');
+      showLoadingRow(main, 'Loading…');
+      fetchCampingV2Content()
+        .then(function (contentHtml) { renderAdminCampingV2Home(contentHtml); })
+        .catch(function (err) { showErrorIn(main, err); });
+    }
+
+    function renderAdminCampingV2Home(contentHtml) {
+      var main = document.getElementById('mainContent');
       main.innerHTML = '';
+      renderCampingV2Banner(main, contentHtml);
 
       var h = document.createElement('h2');
       h.className = 'section-title';
@@ -2816,22 +2864,57 @@
       showBlindDatePicker(blindDateEvents);
     }
 
+    function fetchBlindDateContent() {
+      var token = localStorage.getItem(TOKEN_KEY);
+      return callApi('/api/blinddate/content', { token: token }).then(function (res) { return res.contentHtml || ''; });
+    }
+
+    function renderBlindDateBanner(main, contentHtml) {
+      if (viewMode === 'admin') {
+        var banner = document.createElement('div');
+        banner.className = 'adminBanner';
+        banner.textContent = 'Admin View — edit the message below. Everyone sees it above Blind Date With a Book.';
+        main.appendChild(banner);
+        main.appendChild(renderContentEditor(contentHtml || '', '/api/admin/blinddate/content/save'));
+      } else if (contentHtml && contentHtml.trim()) {
+        var content = document.createElement('div');
+        content.className = 'homeContent';
+        content.innerHTML = contentHtml;
+        main.appendChild(content);
+      }
+    }
+
     function showBlindDateEmpty() {
       var main = document.getElementById('mainContent');
-      main.innerHTML = '';
-      var h = document.createElement('h2');
-      h.className = 'section-title';
-      h.textContent = 'Blind Date With a Book';
-      main.appendChild(h);
-      var empty = document.createElement('div');
-      empty.className = 'empty';
-      empty.textContent = 'Nothing here right now.';
-      main.appendChild(empty);
+      showLoadingRow(main, 'Loading…');
+      fetchBlindDateContent()
+        .then(function (contentHtml) {
+          main.innerHTML = '';
+          renderBlindDateBanner(main, contentHtml);
+          var h = document.createElement('h2');
+          h.className = 'section-title';
+          h.textContent = 'Blind Date With a Book';
+          main.appendChild(h);
+          var empty = document.createElement('div');
+          empty.className = 'empty';
+          empty.textContent = 'Nothing here right now.';
+          main.appendChild(empty);
+        })
+        .catch(function (err) { showErrorIn(main, err); });
     }
 
     function showBlindDatePicker(list) {
       var main = document.getElementById('mainContent');
+      showLoadingRow(main, 'Loading…');
+      fetchBlindDateContent()
+        .then(function (contentHtml) { renderBlindDatePicker(list, contentHtml); })
+        .catch(function (err) { showErrorIn(main, err); });
+    }
+
+    function renderBlindDatePicker(list, contentHtml) {
+      var main = document.getElementById('mainContent');
       main.innerHTML = '';
+      renderBlindDateBanner(main, contentHtml);
       var h = document.createElement('h2');
       h.className = 'section-title';
       h.textContent = 'Blind Date With a Book';
@@ -2866,8 +2949,11 @@
       var main = document.getElementById('mainContent');
       showLoadingRow(main, 'Loading…');
       var token = localStorage.getItem(TOKEN_KEY);
-      callApi('/api/blinddate/module', { token: token, eventId: eventId })
-        .then(function (data) { renderBlindDateModule(data); })
+      Promise.all([
+        callApi('/api/blinddate/module', { token: token, eventId: eventId }),
+        fetchBlindDateContent()
+      ])
+        .then(function (results) { renderBlindDateModule(results[0], results[1]); })
         .catch(function (err) { showErrorIn(main, err); });
     }
 
@@ -3111,9 +3197,10 @@
       return wrap;
     }
 
-    function renderBlindDateModule(data) {
+    function renderBlindDateModule(data, contentHtml) {
       var main = document.getElementById('mainContent');
       main.innerHTML = '';
+      renderBlindDateBanner(main, contentHtml);
 
       var h = document.createElement('h2');
       h.className = 'section-title';
@@ -3154,7 +3241,16 @@
 
     function showAdminBlindDateHome() {
       var main = document.getElementById('mainContent');
+      showLoadingRow(main, 'Loading…');
+      fetchBlindDateContent()
+        .then(function (contentHtml) { renderAdminBlindDateHome(contentHtml); })
+        .catch(function (err) { showErrorIn(main, err); });
+    }
+
+    function renderAdminBlindDateHome(contentHtml) {
+      var main = document.getElementById('mainContent');
       main.innerHTML = '';
+      renderBlindDateBanner(main, contentHtml);
 
       var h = document.createElement('h2');
       h.className = 'section-title';
